@@ -5,7 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api');
+  // app.setGlobalPrefix('api');
   const config = new DocumentBuilder()
     .setTitle('Food Delivery API')
     .setDescription('API documentation for the Food Delivery System')

@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.git
+.gitignore
+*.log
+coverage
+README.md
+.dockerignore
+docker-compose.yml
+Dockerfile
+prisma/migrations
+src/**/*.spec.ts
+nginx/

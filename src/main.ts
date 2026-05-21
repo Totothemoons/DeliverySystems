@@ -1,9 +1,15 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
+import { ZodValidationPipe } from 'nestjs-zod';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.useGlobalPipes(new ZodValidationPipe());
 
   // app.setGlobalPrefix('api');
   const config = new DocumentBuilder()
@@ -19,7 +25,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);
   const host = configService.get<string>('HOST', 'localhost');
-
+  app.use(cookieParser());
   await app.listen(port, host);
 }
 bootstrap();

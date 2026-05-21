@@ -5,13 +5,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnv } from './config/env.schema';
 import { PrismaModule } from './prisma/prisma.module';
 import { Loggermiddlware } from './middleware/logger.middleware';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
 
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv,
-  }), PrismaModule],
+  }), PrismaModule, AuthModule],
 
   controllers: [AppController],
   providers: [AppService],

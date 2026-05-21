@@ -8,6 +8,8 @@ import { LoginDto } from './dto/login.dto';
 import { JWTTokens } from './auth.controller';
 import { StringValue } from 'ms'
 import { access } from 'fs';
+import { LogoutDto } from './dto/logout.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 enum UserRole {
     CUSTOMER,
     DRIVER,
@@ -119,6 +121,14 @@ export class AuthService {
             token: accessToken,
             refreshToken: refreshToken
         }
+    }
+
+    async logout(logoutDto: LogoutDto){
+        const {refreshToken} = logoutDto;
+        if(!refreshToken) throw new Error("Refresh Token is required");
+        await this.prisma.refreshToken.deleteMany({
+            where: {token: refreshToken}
+        });
     }
 
     async hashPassword(password: string): Promise<string>{

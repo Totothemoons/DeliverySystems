@@ -1,7 +1,9 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Post, Req, Res } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { LoginDto } from './dto/login.dto.js';
+import { LogoutDto } from './dto/logout.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 
 export interface JWTTokens {
     token: string,
@@ -29,5 +31,15 @@ export class AuthController {
         });
 
         return {token};
+    }
+    // @Post('change-password')
+    // async changePassword(@Body() changePasswordDto: ChangePasswordDto) {
+    //     return await this.authService.changePassword(changePasswordDto); 
+    // }
+
+    @Post('logout')
+    async logout(@Req() req) {
+        const refreshToken = req.cookies['refreshToken'] as LogoutDto;
+        return await this.authService.logout(refreshToken);
     }
 }

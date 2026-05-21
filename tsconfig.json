@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "bundler",
+    "module": "NodeNext", // เปลี่ยนจาก NodeNext
+    "moduleResolution": "NodeNext", // เปลี่ยนจาก NodeNext
     "esModuleInterop": true,
-    "isolatedModules": true,
+    "isolatedModules": false, // เปลี่ยนเป็น false (NodeNext บังคับ true ซึ่งขัดกับ emitDecoratorMetadata)
     "declaration": true,
     "removeComments": true,
     "emitDecoratorMetadata": true,

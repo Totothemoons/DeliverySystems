@@ -1,16 +1,23 @@
 import { NestFactory } from '@nestjs/core';
+import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { ZodValidationPipe } from 'nestjs-zod';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(new ZodValidationPipe());
-
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    transformOptions: {
+      enableImplicitConversion: true, // This allows the pipe to convert types based on TypeScript metadata
+    },
+  }))
   // app.setGlobalPrefix('api');
   const config = new DocumentBuilder()
     .setTitle('Food Delivery API')

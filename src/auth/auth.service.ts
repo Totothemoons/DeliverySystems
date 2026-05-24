@@ -9,6 +9,9 @@ import { JWTTokens } from './auth.controller';
 import { StringValue } from 'ms'
 import { LogoutDto } from './dto/logout.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CustomUnauthorizedException } from '../common/exception/unauthorize.exception'
+import { CustomBadRequestException } from '../common/exception/bad-request.exception'
+import { CustomNotFoundException } from '../common/exception/not-found.exception'
 
 enum UserRole {
     CUSTOMER,
@@ -29,17 +32,17 @@ export class AuthService {
         const {email , password , confirmPassword, fullname} = register as RegisterDto;
 
         if(!email || !password || !fullname){
-            throw new Error("Please Fill information")
+            throw new CustomBadRequestException("Email, fullname and password are required")
         }
 
         const existingUser = await this.prisma.user.findFirst({
             where : {email : register.email as string}
         });
         if( existingUser){
-            throw new Error("Email is already in used");
+            throw new CustomBadRequestException("Email is already in used");
         }
 
-        if(password !== confirmPassword) throw new Error("Password is wrong");
+        if(password !== confirmPassword) throw new CustomBadRequestException("Password is wrong");
         const hashPassword = await this.hashPassword(password);
         
         await this.prisma.user.create({
@@ -62,12 +65,12 @@ export class AuthService {
             where: {email : email}
         });
         if(!existingUser){
-            throw new Error("Not Found this Account")
+            throw new CustomNotFoundException("Not Found this Account")
         }
         const isValid = await compare(loginDto.password, existingUser.password as string); 
         
         if(!isValid){
-            throw new Error("Password is wrong")
+            throw new CustomUnauthorizedException("Invalid Credential")
         }
         const token = await this.getTokens(existingUser);
         const hashedRefreshToken = await this.hashPassword(token.refreshToken)
@@ -119,10 +122,10 @@ export class AuthService {
         const user = await this.prisma.user.findUnique({
             where: {id: userId}
         });
-        if(!user) throw new Error("User not found");
+        if(!user) throw new CustomNotFoundException("User not found");
 
         const isMatch = await compare(currentPassword, user.password as string);
-        if(!isMatch) throw new Error("Current password is incorrect");
+        if(!isMatch) throw new CustomUnauthorizedException("Invalid Credential");
 
         const hashedNewPassword = await this.hashPassword(newPassword);
         await this.prisma.$transaction([
@@ -145,7 +148,7 @@ export class AuthService {
     async refreshToken(token: string): Promise<JWTTokens> {
         try{
             if(!token) {
-                throw new Error("Unauthorize!");
+                throw new CustomUnauthorizedException("RefreshToken required!");
             }
             const payload = await this.jwtService.verifyAsync(token, {
                 secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET')
@@ -172,7 +175,7 @@ export class AuthService {
             }
 
             if (!storedToken) {
-                throw new Error("unauthorize");
+                throw new CustomNotFoundException();
             }
             
             const tokens = await this.getTokens(storedToken.user);
@@ -199,7 +202,7 @@ export class AuthService {
             return tokens
 
         }catch(err){
-            throw new Error("unauthorize");
+            throw new Error("Internal server");
         }
 
     }

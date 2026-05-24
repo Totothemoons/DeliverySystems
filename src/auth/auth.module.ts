@@ -13,7 +13,7 @@ import { AuthService } from './auth.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>('JWT_ACCESS_TOKEN_SECRET'),
+        secret: config.get<string>('JWT_ACCESS_TOKEN_SECRET'),
         signOptions: { expiresIn: config.getOrThrow<string>('JWT_ACCESS_EXPIRATION') as any },
       })
     })

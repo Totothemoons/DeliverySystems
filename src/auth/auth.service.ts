@@ -123,6 +123,35 @@ export class AuthService {
         }
     }
 
+    async changePassword(changePasswordDto: ChangePasswordDto, userId: string){
+        const {currentPassword, newPassword} = changePasswordDto;
+        const user = await this.prisma.user.findUnique({
+            where: {id: userId}
+        });
+        if(!user) throw new Error("User not found");
+
+        const isMatch = await compare(currentPassword, user.password as string);
+        if(!isMatch) throw new Error("Current password is incorrect");
+
+        const hashedNewPassword = await this.hashPassword(newPassword);
+        await this.prisma.$transaction([
+            this.prisma.user.update({
+                where: {id: userId},
+                data: {
+                    password: hashedNewPassword
+                },
+            }),
+
+            this.prisma.refreshToken.deleteMany({
+                where: {
+                    userId: userId
+                },
+            }),
+        ]);
+        return {message: "Password changed successfully"};
+
+    }
+
     async logout(logoutDto: LogoutDto){
         const {refreshToken} = logoutDto;
         if(!refreshToken) throw new Error("Refresh Token is required");

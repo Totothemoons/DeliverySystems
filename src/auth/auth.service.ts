@@ -7,19 +7,14 @@ import { hash, compare } from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { JWTTokens } from './auth.controller';
 import { StringValue } from 'ms'
-import { access } from 'fs';
 import { LogoutDto } from './dto/logout.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+
 enum UserRole {
     CUSTOMER,
     DRIVER,
     SHOP,
     ADMIN,
-}
-type User = {
-    id: string
-    email : string,
-    password: string
 }
 
 @Injectable()
@@ -53,7 +48,7 @@ export class AuthService {
                 password: hashPassword,
                 fullname: fullname,
                 role: "CUSTOMER",
-                phone: register.password,
+                phone: register.phone,
                 profileImageUrl: register.profileImageUrl
             }
         });
@@ -69,10 +64,6 @@ export class AuthService {
         if(!existingUser){
             throw new Error("Not Found this Account")
         }
-        // Delete Token that expires
-        await this.prisma.refreshToken.deleteMany({
-            where: { expiresAt: {lt: new Date()}}
-        })
         const isValid = await compare(loginDto.password, existingUser.password as string); 
         
         if(!isValid){
@@ -85,7 +76,7 @@ export class AuthService {
         await this.prisma.refreshToken.create({
             data: {
                 userId: existingUser.id,
-                token: token.refreshToken,
+                token: hashedRefreshToken,
                 expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             }
 
@@ -151,13 +142,91 @@ export class AuthService {
         return {message: "Password changed successfully"};
 
     }
+    async refreshToken(token: string): Promise<JWTTokens> {
+        try{
+            if(!token) {
+                throw new Error("Unauthorize!");
+            }
+            const payload = await this.jwtService.verifyAsync(token, {
+                secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET')
+            });
+            const findToken  = await this.prisma.refreshToken.findMany({
+                where : {
+                    userId: payload.sub,
+                    revoked: false,
+                    expiresAt: {
+                        gt: new Date()
+                    },
+                },
+                include: {
+                    user: true
+                },
+            });
+            let storedToken: (typeof findToken)[number] | null = null;
+            for(const t of findToken){
+                const match = await compare(token, t.token)
+                if(match){
+                    storedToken = t;
+                    break;
+                }
+            }
 
-    async logout(logoutDto: LogoutDto){
+            if (!storedToken) {
+                throw new Error("unauthorize");
+            }
+            
+            const tokens = await this.getTokens(storedToken.user);
+            const hashedToken = await this.hashPassword(tokens.refreshToken);
+
+            await this.prisma.$transaction([
+                this.prisma.refreshToken.delete({
+                    where: {
+                        id : storedToken.id
+                    }    
+                }),
+
+                this.prisma.refreshToken.create({
+                    data: {
+                        userId: storedToken.user.id,
+                        token: hashedToken,
+                        expiresAt: new Date(
+                            Date.now() + 7 * 24 * 60 * 60 * 1000,
+                        ),
+                    },
+                })
+            ]);
+
+            return tokens
+
+        }catch(err){
+            throw new Error("unauthorize");
+        }
+
+    }
+
+    async logout(logoutDto: LogoutDto, userid: string){
         const {refreshToken} = logoutDto;
         if(!refreshToken) throw new Error("Refresh Token is required");
-        await this.prisma.refreshToken.deleteMany({
-            where: {token: refreshToken}
+        const findToken = await this.prisma.refreshToken.findMany({
+            where: {
+                userId : userid,
+                revoked: false,
+                expiresAt: {
+                    gt: new Date()
+                },
+            },
         });
+        let storedToken : (typeof findToken)[number] | null = null; 
+        for(const t of findToken){
+            const match = await compare(refreshToken, t.token);
+            if(match){
+                storedToken = t;
+                break;
+            }
+        }
+        await this.prisma.refreshToken.delete({
+            where: {id : storedToken?.id}
+        })
     }
 
     async hashPassword(password: string): Promise<string>{

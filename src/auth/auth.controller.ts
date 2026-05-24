@@ -26,23 +26,39 @@ export class AuthController {
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            samesite: 'strict',
-            secure: true,
+            sameSite: 'strict',
+            secure: process.env.NODE_ENV === 'production',
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         return {token};
     }
+    @Post('refresh-token')
+    async refreshToken(@Req() req, @Res({passthrough:true}) res) : Promise<{token : string}>{
+        const refreshToken = req.cookies['refreshToken'];
+
+        const tokens = await this.authService.refreshToken(refreshToken);
+        res.cookie('refreshToken', tokens.refreshToken, {
+            httpOnly: true,
+            sameSite: 'strict',
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return {token: tokens.token}
+    }
+
     @UseGuards(AccessTokenGuard)
     @Post('change-password')
     async changePassword(@Body() changePasswordDto: ChangePasswordDto, @Req() req){
         return await this.authService.changePassword(changePasswordDto, req.user.sub); 
     }
 
+    @UseGuards(AccessTokenGuard)
     @Post('logout')
     async logout(@Req() req, @Res({passthrough:true}) res) {
         const refreshToken = req.cookies['refreshToken'] as LogoutDto;
         res.clearCookie('refreshToken');
-        return await this.authService.logout(refreshToken);
+        return await this.authService.logout(refreshToken, req.user.sub);
     }
 }

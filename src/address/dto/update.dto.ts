@@ -1,37 +1,32 @@
 import {
   IsString,
-  IsNotEmpty,
-  IsNumber,
   IsOptional,
+  IsNumber,
   IsBoolean,
   MaxLength,
   Min,
   Max,
 } from 'class-validator';
 
-export class CreateAddressDto {
-  @IsNotEmpty()
+export class UpdateAddressDto {
+  @IsOptional()
   @IsString()
-  address!: string;
+  address?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
   @Min(-90)
   @Max(90)
-  latitude!: number;
+  latitude?: number;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsNumber()
   @Min(-180)
   @Max(180)
-  longitude!: number;
-  
+  longitude?: number;
+
   @IsOptional()
   @IsString()
   @MaxLength(100)
   label?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isDefault?: boolean;
 }

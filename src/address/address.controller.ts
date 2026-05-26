@@ -1,8 +1,8 @@
-import { Controller, Get , UseGuards,Req, Post, Body} from '@nestjs/common';
+import { Controller, Get , UseGuards,Req, Post, Body, Patch, Param} from '@nestjs/common';
 import { AddressService } from './address.service';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
 import { CreateAddressDto } from './dto/create.dto';
-
+import { UpdateAddressDto } from './dto/update.dto';
 
 interface RequestWithUser extends Request {
     user: {sub: string; role: string};
@@ -28,4 +28,20 @@ export class AddressController {
         return this.addressService.createAddress(req.user.sub, dto);
     }
     
+    @Patch(':id')
+    async updateAddress(
+        @Req() req: RequestWithUser,
+        @Param('id') addressId: string,
+        @Body() dto: UpdateAddressDto,
+    ) {
+        return this.addressService.updateAddress(req.user.sub, addressId, dto);
+  }
+
+  @Patch(':id/default')
+    async setDefaultAddress(
+        @Req() req: RequestWithUser,
+        @Param('id') addressId: string,
+    ) {
+        return this.addressService.setDefaultAddress(req.user.sub, addressId);
+  }
 }

@@ -89,4 +89,35 @@ export class AddressService {
     
         return { message: 'Default address updated successfully' };
   }
+  async deleteAddress(userId: string, addressId: string) {
+    const address = await this.prisma.address.findUnique({
+      where: { id: addressId },
+    });
+ 
+    if (!address) {
+      throw new CustomNotFoundException('Address not found');
+    }
+ 
+    if (address.userId !== userId) {
+      throw new CustomForbiddenException('You do not have permission to delete this address');
+    }
+ 
+    await this.prisma.address.delete({ where: { id: addressId } });
+ 
+    if (address.isDefault) {
+      const next = await this.prisma.address.findFirst({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+ 
+      if (next) {
+        await this.prisma.address.update({
+          where: { id: next.id },
+          data: { isDefault: true },
+        });
+      }
+    }
+ 
+    return { message: 'Address deleted successfully' };
+  }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get , UseGuards,Req, Post, Body, Patch, Param} from '@nestjs/common';
+import { Controller, Get , UseGuards,Req, Post, Body, Patch, Param,Delete, HttpCode, HttpStatus} from '@nestjs/common';
 import { AddressService } from './address.service';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
 import { CreateAddressDto } from './dto/create.dto';
@@ -27,7 +27,7 @@ export class AddressController {
     ) {
         return this.addressService.createAddress(req.user.sub, dto);
     }
-    
+
     @Patch(':id')
     async updateAddress(
         @Req() req: RequestWithUser,
@@ -35,6 +35,15 @@ export class AddressController {
         @Body() dto: UpdateAddressDto,
     ) {
         return this.addressService.updateAddress(req.user.sub, addressId, dto);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.OK)
+    async deleteAddress(
+        @Req() req: RequestWithUser,
+        @Param('id') addressId: string,
+    ) {
+        return this.addressService.deleteAddress(req.user.sub, addressId);
   }
 
   @Patch(':id/default')

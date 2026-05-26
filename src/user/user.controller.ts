@@ -27,7 +27,7 @@ export class UserController {
         private readonly userService : UserService
     ){}
  // ------------------- GET ----------------------------
- 
+  
   @Get('me')
   async getProfile(@Req() req: RequestWithUser) {
     return this.userService.getProfile(req.user.sub);

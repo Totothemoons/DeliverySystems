@@ -4,11 +4,15 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
+import { MaillerService } from '../mailler/mailler.service';
+import { PassportModule } from '@nestjs/passport';
+import { AccessStrategy } from './passport-strategy/access.token.strategy';
 
 @Module({
   imports: [
     PrismaModule,
     ConfigModule,
+    PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -19,7 +23,7 @@ import { AuthService } from './auth.service';
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, MaillerService, AccessStrategy],
   exports: [AuthService]
 })
 export class AuthModule {}

@@ -12,6 +12,11 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { CustomUnauthorizedException } from '../common/exception/unauthorize.exception'
 import { CustomBadRequestException } from '../common/exception/bad-request.exception'
 import { CustomNotFoundException } from '../common/exception/not-found.exception'
+import { forgotPasswordDto } from './dto/forgot-password.js';
+import { Role } from './decorator/role.decorator';
+import { MaillerService } from '../mailler/mailler.service';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { JwtPayload } from './passport-strategy/access.token.strategy';
 
 enum UserRole {
     CUSTOMER,
@@ -25,7 +30,8 @@ export class AuthService {
     constructor(
         private readonly prisma : PrismaService,
         private readonly jwtService: JwtService,
-        private readonly configService: ConfigService
+        private readonly configService: ConfigService,
+        private readonly mailService: MaillerService
     ) {}
 
     async createUser(register : RegisterDto){
@@ -207,8 +213,7 @@ export class AuthService {
 
     }
 
-    async logout(logoutDto: LogoutDto, userid: string){
-        const {refreshToken} = logoutDto;
+    async logout(refreshToken: string, userid: string){
         if(!refreshToken) throw new Error("Refresh Token is required");
         const findToken = await this.prisma.refreshToken.findMany({
             where: {
@@ -230,6 +235,89 @@ export class AuthService {
         await this.prisma.refreshToken.delete({
             where: {id : storedToken?.id}
         })
+    }
+    async forgotPassword(forgotDto : forgotPasswordDto){
+
+        const user = await this.prisma.user.findFirst({
+            where: {
+                email : forgotDto.email
+            }
+        });
+        if(user){
+            const resetToken = await this.jwtService.signAsync(
+                {sub: user.id, role: user.role},
+                {secret: this.configService.get<string>('JWT_RESET_PASSWORD_SECRET'),
+                    expiresIn: this.configService.get<StringValue>('JWT_RESET_PASSWORD_EXPIRATION')
+                }
+            );
+            const hashToken = await this.hashPassword(resetToken);
+            await this.prisma.passwordResetToken.create({
+                data: {
+                    userId: user.id,
+                    token: hashToken,
+                    expiresAt: new Date(
+                        Date.now() + 15 * 60 * 1000
+                    )
+                }
+            });
+            await this.mailService.sendPasswordResetEmail(user.email!, resetToken);
+
+        }
+        return {message : "If the email is registered, you will receive a password reset link."};
+
+    }
+    async resetPassword(resetPasswordDto : ResetPasswordDto){
+        const { newPassword , token} = resetPasswordDto;
+        const payload : JwtPayload = await this.jwtService.verifyAsync(token, {
+            secret: this.configService.get<string>('JWT_RESET_PASSWORD_SECRET')
+        });
+        
+        const resetTokens =
+            await this.prisma.passwordResetToken.findMany({
+                where: {
+                    userId: payload.sub,
+                    used: false,
+                    expiresAt: {
+                    gt: new Date(),
+                    },
+                },
+            });
+
+        let validToken : (typeof resetTokens)[number] | null = null;
+
+        for (const t of resetTokens) {
+            const match = await compare(token, t.token);
+            if (match) {
+                validToken = t;
+                break;
+            }
+        }
+
+        if (!validToken) {
+            throw new CustomNotFoundException();
+        }
+        const hashedPassword = await this.hashPassword(newPassword);
+        await this.prisma.$transaction([
+            this.prisma.user.update({
+                where: {id: payload.sub},
+                data: {
+                    password: hashedPassword
+                }
+            }),
+            this.prisma.refreshToken.updateMany({
+                where: {userId : payload.sub},
+                data: {
+                    revoked: true
+                }
+            }),
+            this.prisma.passwordResetToken.update({
+                where: {id: validToken.id},
+                data: {
+                    used: true
+                }
+            })
+        ]);
+        return { message : "Password reset successful. Please login with your new password."}
     }
 
     async hashPassword(password: string): Promise<string>{

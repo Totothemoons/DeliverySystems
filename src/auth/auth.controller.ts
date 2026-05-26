@@ -5,6 +5,8 @@ import { LoginDto } from './dto/login.dto.js';
 import { LogoutDto } from './dto/logout.dto.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { AccessTokenGuard } from './guard/access-token.guard.js';
+import { forgotPasswordDto } from './dto/forgot-password.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
 
 export interface JWTTokens {
     token: string,
@@ -26,8 +28,8 @@ export class AuthController {
 
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            sameSite: 'strict',
-            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            secure: false,
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -57,8 +59,16 @@ export class AuthController {
     @UseGuards(AccessTokenGuard)
     @Post('logout')
     async logout(@Req() req, @Res({passthrough:true}) res) {
-        const refreshToken = req.cookies['refreshToken'] as LogoutDto;
+        const refreshToken = req.cookies['refreshToken'];
         res.clearCookie('refreshToken');
         return await this.authService.logout(refreshToken, req.user.sub);
+    }
+    @Post('forgot-password')
+    async forgotPassword(@Body() forgotPasswordDto : forgotPasswordDto){
+        return await this.authService.forgotPassword(forgotPasswordDto);
+    }
+    @Post('reset-password')
+    async resetPassword(@Body() resetPasswordDto : ResetPasswordDto){
+        return await this.authService.resetPassword(resetPasswordDto);
     }
 }

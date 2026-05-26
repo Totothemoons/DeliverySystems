@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,6 +5,240 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  id                  String               @id @default(uuid()) @db.Uuid
+  email               String?              @unique @db.VarChar(255)
+  password            String?              @db.VarChar(255)
+  fullname            String               @db.VarChar(255)
+  phone               String?              @unique @db.VarChar(20)
+  role                UserRole
+  authProvider        AuthProvider         @default(LOCAL) @map("auth_provider")
+  providerId          String?              @map("provider_id") @db.VarChar(255)
+  profileImageUrl     String?              @map("profile_image_url")
+  isActive            Boolean              @default(true) @map("is_active")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  addresses           Address[]
+  deliveries          Delivery[]
+  driverLocation      DriverLocation?
+  driverProfile       DriverProfile?
+  receivedMessages    Message[]            @relation("ReceiverMessages")
+  sentMessages        Message[]            @relation("SenderMessages")
+  customerOrders      Order[]              @relation("CustomerOrders")
+  driverOrders        Order[]              @relation("DriverOrders")
+  passwordResetTokens PasswordResetToken[]
+  refreshTokens       RefreshToken[]
+  restaurants         Restaurant[]
+  transactionLogs     TransactionLog[]
+
+  @@map("users")
+}
+
+model Address {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  address   String
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
+  label     String?  @db.VarChar(100)
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+  orders    Order[]
+
+  @@map("addresses")
+}
+
+model DriverProfile {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @unique @map("user_id") @db.Uuid
+  licenseNumber String    @map("license_number") @db.VarChar(100)
+  vehicleType   String    @map("vehicle_type") @db.VarChar(100)
+  vehiclePlate  String    @map("vehicle_plate") @db.VarChar(100)
+  rating        Decimal?  @db.Decimal(2, 1)
+  isVerified    Boolean   @default(false) @map("is_verified")
+  isOnline      Boolean   @default(false) @map("is_online")
+  isBusy        Boolean   @default(false) @map("is_busy")
+  lastActiveAt  DateTime? @map("last_active_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@map("driver_profiles")
+}
+
+model Restaurant {
+  id                 String           @id @default(uuid()) @db.Uuid
+  ownerId            String           @map("owner_id") @db.Uuid
+  name               String           @db.VarChar(255)
+  description        String?
+  phone              String           @db.VarChar(20)
+  restaurantImageUrl String?          @map("restaurant_image_url")
+  address            String
+  latitude           Decimal          @db.Decimal(10, 8)
+  longitude          Decimal          @db.Decimal(11, 8)
+  status             RestaurantStatus
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  menuItems          MenuItem[]
+  orders             Order[]
+  owner              User             @relation(fields: [ownerId], references: [id])
+
+  @@map("restaurants")
+}
+
+model Category {
+  id        String     @id @default(uuid()) @db.Uuid
+  name      String     @db.VarChar(100)
+  menuItems MenuItem[]
+
+  @@map("category")
+}
+
+model MenuItem {
+  id           String      @id @default(uuid()) @db.Uuid
+  restaurantId String      @map("restaurant_id") @db.Uuid
+  categoryId   String      @map("category_id") @db.Uuid
+  name         String      @db.VarChar(255)
+  description  String?
+  price        Decimal     @db.Decimal(10, 2)
+  stock        Int
+  imageUrl     String?     @map("image_url")
+  isAvailable  Boolean     @default(true) @map("is_available")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  deletedAt    DateTime?   @map("deleted_at")
+  category     Category    @relation(fields: [categoryId], references: [id])
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  orderItems   OrderItem[]
+
+  @@map("menu_items")
+}
+
+model Order {
+  id           String      @id @default(uuid()) @db.Uuid
+  customerId   String      @map("customer_id") @db.Uuid
+  restaurantId String      @map("restaurant_id") @db.Uuid
+  driverId     String?     @map("driver_id") @db.Uuid
+  addressId    String      @map("address_id") @db.Uuid
+  totalPrice   Decimal     @map("total_price") @db.Decimal(10, 2)
+  deliveryFee  Decimal     @map("delivery_fee") @db.Decimal(10, 2)
+  orderStatus  OrderStatus @map("order_status")
+  note         String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  delivery     Delivery?
+  messages     Message[]
+  address      Address     @relation(fields: [addressId], references: [id])
+  customer     User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  driver       User?       @relation("DriverOrders", fields: [driverId], references: [id])
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  orderItems   OrderItem[]
+  payment      Payment?
+
+  @@map("order")
+}
+
+model OrderItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  menuItemId String   @map("menu_item_id") @db.Uuid
+  quantity   Int
+  price      Decimal  @db.Decimal(10, 2)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  order      Order    @relation(fields: [orderId], references: [id])
+
+  @@map("order_items")
+}
+
+model Delivery {
+  id          String         @id @default(uuid()) @db.Uuid
+  orderId     String         @unique @map("order_id") @db.Uuid
+  driverId    String         @map("driver_id") @db.Uuid
+  status      DeliveryStatus
+  pickedUpAt  DateTime?      @map("picked_up_at")
+  deliveredAt DateTime?      @map("delivered_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  driver      User           @relation(fields: [driverId], references: [id])
+  order       Order          @relation(fields: [orderId], references: [id])
+
+  @@map("deliveries")
+}
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  orderId        String        @unique @map("order_id") @db.Uuid
+  method         PaymentMethod
+  amount         Decimal       @db.Decimal(10, 2)
+  status         PaymentStatus
+  transactionRef String?       @map("transaction_ref") @db.VarChar(255)
+  paidAt         DateTime?     @map("paid_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  order          Order         @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+model TransactionLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  action    String   @db.VarChar(100)
+  entity    String   @db.VarChar(100)
+  entityId  String   @map("entity_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("transaction_log")
+}
+
+model Message {
+  id         String   @id @default(uuid()) @db.Uuid
+  senderId   String   @map("sender_id") @db.Uuid
+  receiverId String   @map("receiver_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  message    String
+  createdAt  DateTime @default(now()) @map("created_at")
+  order      Order    @relation(fields: [orderId], references: [id])
+  receiver   User     @relation("ReceiverMessages", fields: [receiverId], references: [id])
+  sender     User     @relation("SenderMessages", fields: [senderId], references: [id])
+
+  @@map("messages")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String
+  revoked   Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("refreshToken")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String
+  used      Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("password_reset_tokens")
+}
+
+model DriverLocation {
+  id        String   @id @default(uuid()) @db.Uuid
+  driverId  String   @unique @map("driver_id") @db.Uuid
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
+  updatedAt DateTime @updatedAt @map("updated_at")
+  driver    User     @relation(fields: [driverId], references: [id])
+
+  @@map("driver_locations")
 }
 
 enum AuthProvider {
@@ -61,274 +290,4 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
-}
-
-model User {
-  id       String   @id @default(uuid()) @db.Uuid
-  email    String?  @unique @db.VarChar(255)
-  password String?  @db.VarChar(255)
-  fullname String   @db.VarChar(255)
-  phone    String?  @unique @db.VarChar(20)
-  role     UserRole
-
-  authProvider    AuthProvider @default(LOCAL) @map("auth_provider")
-  providerId      String?      @map("provider_id") @db.VarChar(255)
-  profileImageUrl String?      @map("profile_image_url") @db.Text
-  isActive        Boolean      @default(true) @map("is_active")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  addresses        Address[]
-  driverProfile    DriverProfile?
-  restaurants      Restaurant[]
-  customerOrders   Order[]        @relation("CustomerOrders")
-  driverOrders     Order[]        @relation("DriverOrders")
-  deliveries       Delivery[]
-  sentMessages     Message[]      @relation("SenderMessages")
-  receivedMessages Message[]      @relation("ReceiverMessages")
-
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-  transactionLogs     TransactionLog[]
-  driverLocation      DriverLocation?
-
-  @@map("users")
-}
-
-model Address {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  address   String   @db.Text
-  latitude  Decimal  @db.Decimal(10, 8)
-  longitude Decimal  @db.Decimal(11, 8)
-  label     String?  @db.VarChar(100)
-  isDefault Boolean  @default(false) @map("is_default")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user   User    @relation(fields: [userId], references: [id])
-  orders Order[]
-
-  @@map("addresses")
-}
-
-model DriverProfile {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @unique @map("user_id") @db.Uuid
-
-  licenseNumber String   @map("license_number") @db.VarChar(100)
-  vehicleType   String   @map("vehicle_type") @db.VarChar(100)
-  vehiclePlate  String   @map("vehicle_plate") @db.VarChar(100)
-  rating        Decimal? @db.Decimal(2, 1)
-
-  isVerified Boolean @default(false) @map("is_verified")
-  isOnline   Boolean @default(false) @map("is_online")
-  isBusy     Boolean @default(false) @map("is_busy")
-
-  lastActiveAt DateTime? @map("last_active_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("driver_profiles")
-}
-
-model Restaurant {
-  id      String @id @default(uuid()) @db.Uuid
-  ownerId String @map("owner_id") @db.Uuid
-
-  name               String           @db.VarChar(255)
-  description        String?          @db.Text
-  phone              String           @db.VarChar(20)
-  restaurantImageUrl String?          @map("restaurant_image_url") @db.Text
-  address            String           @db.Text
-  latitude           Decimal          @db.Decimal(10, 8)
-  longitude          Decimal          @db.Decimal(11, 8)
-  status             RestaurantStatus
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  owner     User       @relation(fields: [ownerId], references: [id])
-  menuItems MenuItem[]
-  orders    Order[]
-
-  @@map("restaurants")
-}
-
-model Category {
-  id   String @id @default(uuid()) @db.Uuid
-  name String @db.VarChar(100)
-
-  menuItems MenuItem[]
-
-  @@map("category")
-}
-
-model MenuItem {
-  id           String @id @default(uuid()) @db.Uuid
-  restaurantId String @map("restaurant_id") @db.Uuid
-  categoryId   String @map("category_id") @db.Uuid
-
-  name        String  @db.VarChar(255)
-  description String? @db.Text
-  price       Decimal @db.Decimal(10, 2)
-  stock       Int
-  imageUrl    String? @map("image_url") @db.Text
-  isAvailable Boolean @default(true) @map("is_available")
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
-  category   Category   @relation(fields: [categoryId], references: [id])
-
-  orderItems OrderItem[]
-
-  @@map("menu_items")
-}
-
-model Order {
-  id String @id @default(uuid()) @db.Uuid
-
-  customerId   String      @map("customer_id") @db.Uuid
-  restaurantId String      @map("restaurant_id") @db.Uuid
-  driverId     String?     @map("driver_id") @db.Uuid
-  addressId    String      @map("address_id") @db.Uuid
-  totalPrice   Decimal     @map("total_price") @db.Decimal(10, 2)
-  deliveryFee  Decimal     @map("delivery_fee") @db.Decimal(10, 2)
-  orderStatus  OrderStatus @map("order_status")
-  note         String?     @db.Text
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  customer   User       @relation("CustomerOrders", fields: [customerId], references: [id])
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
-  driver     User?      @relation("DriverOrders", fields: [driverId], references: [id])
-  address    Address    @relation(fields: [addressId], references: [id])
-
-  orderItems OrderItem[]
-  delivery   Delivery?
-  payment    Payment?
-  messages   Message[]
-
-  @@map("order")
-}
-
-model OrderItem {
-  id         String  @id @default(uuid()) @db.Uuid
-  orderId    String  @map("order_id") @db.Uuid
-  menuItemId String  @map("menu_item_id") @db.Uuid
-  quantity   Int
-  price      Decimal @db.Decimal(10, 2)
-
-  order    Order    @relation(fields: [orderId], references: [id])
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
-
-  @@map("order_items")
-}
-
-model Delivery {
-  id       String         @id @default(uuid()) @db.Uuid
-  orderId  String         @unique @map("order_id") @db.Uuid
-  driverId String         @map("driver_id") @db.Uuid
-  status   DeliveryStatus
-
-  pickedUpAt  DateTime? @map("picked_up_at")
-  deliveredAt DateTime? @map("delivered_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-
-  order  Order @relation(fields: [orderId], references: [id])
-  driver User  @relation(fields: [driverId], references: [id])
-
-  @@map("deliveries")
-}
-
-model Payment {
-  id             String        @id @default(uuid()) @db.Uuid
-  orderId        String        @unique @map("order_id") @db.Uuid
-  method         PaymentMethod
-  amount         Decimal       @db.Decimal(10, 2)
-  status         PaymentStatus
-  transactionRef String?       @map("transaction_ref") @db.VarChar(255)
-
-  paidAt    DateTime? @map("paid_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  order Order @relation(fields: [orderId], references: [id])
-
-  @@map("payments")
-}
-
-model TransactionLog {
-  id       String @id @default(uuid()) @db.Uuid
-  userId   String @map("user_id") @db.Uuid
-  action   String @db.VarChar(100)
-  entity   String @db.VarChar(100)
-  entityId String @map("entity_id") @db.Uuid
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("transaction_log")
-}
-
-model Message {
-  id         String @id @default(uuid()) @db.Uuid
-  senderId   String @map("sender_id") @db.Uuid
-  receiverId String @map("receiver_id") @db.Uuid
-  orderId    String @map("order_id") @db.Uuid
-  message    String @db.Text
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  sender   User  @relation("SenderMessages", fields: [senderId], references: [id])
-  receiver User  @relation("ReceiverMessages", fields: [receiverId], references: [id])
-  order    Order @relation(fields: [orderId], references: [id])
-
-  @@map("messages")
-}
-
-model RefreshToken {
-  id      String  @id @default(uuid()) @db.Uuid
-  userId  String  @map("user_id") @db.Uuid
-  token   String  @db.Text
-  revoked Boolean @default(false)
-
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("refreshToken")
-}
-
-model PasswordResetToken {
-  id     String  @id @default(uuid()) @db.Uuid
-  userId String  @map("user_id") @db.Uuid
-  token  String  @db.Text
-  used   Boolean @default(false)
-
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("password_reset_tokens")
-}
-
-model DriverLocation {
-  id        String  @id @default(uuid()) @db.Uuid
-  driverId  String  @unique @map("driver_id") @db.Uuid
-  latitude  Decimal @db.Decimal(10, 8)
-  longitude Decimal @db.Decimal(11, 8)
-
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  driver User @relation(fields: [driverId], references: [id])
-
-  @@map("driver_locations")
 }

@@ -9,13 +9,14 @@ import { AuthModule } from './auth/auth.module';
 import { MaillerModule } from './mailler/mailler.module';
 import { UserModule } from './user/user.module';
 import { AddressModule } from './address/address.module';
+import { DriverModule } from './driver/driver.module';
 
 @Module({
 
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv,
-  }), PrismaModule, AuthModule, MaillerModule, UserModule, AddressModule],
+  }), PrismaModule, AuthModule, MaillerModule, UserModule, AddressModule, DriverModule],
 
   controllers: [AppController],
   providers: [AppService],

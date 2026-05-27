@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
-import { ZodValidationPipe } from 'nestjs-zod';
+import { LoggingInterceptor } from './interceptor/logging.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,6 +18,10 @@ async function bootstrap() {
       enableImplicitConversion: true, // This allows the pipe to convert types based on TypeScript metadata
     },
   }))
+
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+  );
   // app.setGlobalPrefix('api');
   const config = new DocumentBuilder()
     .setTitle('Food Delivery API')

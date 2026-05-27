@@ -4,6 +4,7 @@ import { CustomNotFoundException } from '../common/exception/not-found.exception
 import { CustomForbiddenException } from '../common/exception/forbidden.exception';
 import { CreateDriverProfileDto } from './dto/create.dto';
 import { ConflictException } from '@nestjs/common';
+import { UpdateDriverProfileDto } from './dto/update.dto';
 @Injectable()
 export class DriverService {
     constructor(private readonly prisma : PrismaService) {}
@@ -30,6 +31,7 @@ export class DriverService {
  
     return profile;
   }
+
   async createProfile(userId: string, dto: CreateDriverProfileDto) {
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -51,6 +53,23 @@ export class DriverService {
         licenseNumber: dto.licenseNumber,
         vehicleType: dto.vehicleType,
         vehiclePlate: dto.vehiclePlate,
+      },
+    });
+  }
+
+  async updateProfile(userId: string, dto: UpdateDriverProfileDto) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { userId },
+    });
+ 
+    if (!profile) throw new CustomNotFoundException('Driver profile not found');
+ 
+    return this.prisma.driverProfile.update({
+      where: { userId },
+      data: {
+        ...(dto.licenseNumber && { licenseNumber: dto.licenseNumber }),
+        ...(dto.vehicleType && { vehicleType: dto.vehicleType }),
+        ...(dto.vehiclePlate && { vehiclePlate: dto.vehiclePlate }),
       },
     });
   }

@@ -74,11 +74,12 @@ export class DriverService {
       },
     });
   }
+
   async setOnline(userId: string) {
     const profile = await this.prisma.driverProfile.findUnique({
       where: { userId },
     });
- 
+  
     if (!profile) throw new CustomNotFoundException('Driver profile not found');
     if (!profile.isVerified) {
       throw new CustomForbiddenException('Driver must be verified before going online');
@@ -136,5 +137,16 @@ export class DriverService {
       where: { userId },
       data: { isBusy: false },
     });
+  }
+
+  async getRating(userId: string) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { userId },
+      select: { rating: true },
+    });
+ 
+    if (!profile) throw new CustomNotFoundException('Driver profile not found');
+ 
+    return { rating: profile.rating };
   }
 }

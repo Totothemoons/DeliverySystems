@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Req,Body,Post,Patch, Delete, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req,Body,Post,Patch, Delete, HttpCode, HttpStatus} from '@nestjs/common';
 import { UserController } from '../user/user.controller';
 import { DriverService } from './driver.service';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
@@ -61,5 +61,10 @@ export class DriverController {
   @HttpCode(HttpStatus.OK)
   async setFree(@Req() req: RequestWithUser) {
     return this.driverService.setFree(req.user.sub);
+  }
+
+  @Get('me/rating')
+  async getRating(@Req() req: RequestWithUser) {
+    return this.driverService.getRating(req.user.sub);
   }
 }

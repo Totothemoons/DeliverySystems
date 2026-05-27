@@ -5,6 +5,7 @@ import { CustomForbiddenException } from '../common/exception/forbidden.exceptio
 import { CreateDriverProfileDto } from './dto/create.dto';
 import { ConflictException } from '@nestjs/common';
 import { UpdateDriverProfileDto } from './dto/update.dto';
+import { CustomBadRequestException } from '../common/exception/bad-request.exception';
 @Injectable()
 export class DriverService {
     constructor(private readonly prisma : PrismaService) {}
@@ -71,6 +72,69 @@ export class DriverService {
         ...(dto.vehicleType && { vehicleType: dto.vehicleType }),
         ...(dto.vehiclePlate && { vehiclePlate: dto.vehiclePlate }),
       },
+    });
+  }
+  async setOnline(userId: string) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { userId },
+    });
+ 
+    if (!profile) throw new CustomNotFoundException('Driver profile not found');
+    if (!profile.isVerified) {
+      throw new CustomForbiddenException('Driver must be verified before going online');
+    }
+ 
+    return this.prisma.driverProfile.update({
+      where: { userId },
+      data: {
+        isOnline: true,
+        lastActiveAt: new Date(),
+      },
+    });
+  }
+ 
+  async setOffline(userId: string) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { userId },
+    });
+ 
+    if (!profile) throw new CustomNotFoundException('Driver profile not found');
+    if (profile.isBusy) {
+      throw new CustomBadRequestException('Cannot go offline while delivering an order');
+    }
+ 
+    return this.prisma.driverProfile.update({
+      where: { userId },
+      data: { isOnline: false },
+    });
+  }
+  
+  async setBusy(userId: string) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { userId },
+    });
+ 
+    if (!profile) throw new CustomNotFoundException('Driver profile not found');
+    if (!profile.isOnline) {
+      throw new CustomBadRequestException('Driver must be online to set busy');
+    }
+ 
+    return this.prisma.driverProfile.update({
+      where: { userId },
+      data: { isBusy: true },
+    });
+  }
+ 
+  async setFree(userId: string) {
+    const profile = await this.prisma.driverProfile.findUnique({
+      where: { userId },
+    });
+ 
+    if (!profile) throw new CustomNotFoundException('Driver profile not found');
+ 
+    return this.prisma.driverProfile.update({
+      where: { userId },
+      data: { isBusy: false },
     });
   }
 }

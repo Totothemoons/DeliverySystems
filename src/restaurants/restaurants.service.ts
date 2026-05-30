@@ -6,6 +6,7 @@ import { CustomNotFoundException } from '../common/exception/not-found.exception
 import { CustomForbiddenException } from '../common/exception/forbidden.exception';
 import { CustomBadRequestException } from '../common/exception/bad-request.exception';
 import { ConflictException } from '@nestjs/common';
+import { FindAllUsersDto } from './dto/search.restaurants.dto';
 
 @Injectable()
 export class RestaurantsService {
@@ -18,6 +19,13 @@ export class RestaurantsService {
         if(!restaurants) {
             throw new CustomNotFoundException('No restaurants found for this owner');
         }
+        const isOwner = await this.prisma.user.findUnique({
+            where: { id: ownerId },
+        });
+        if (!isOwner) throw new CustomNotFoundException('Owner not found');
+        if(isOwner.role !== UserRole.SHOP) {
+            throw new CustomForbiddenException('You do not have permission to view these restaurants');
+        }
         
         return restaurants;
     }
@@ -29,7 +37,7 @@ export class RestaurantsService {
         
         if (!isOwner) throw new CustomNotFoundException('Owner not found');
 
-        if(ownerId !== isOwner.id) {
+        if(isOwner.role !== UserRole.SHOP) {
             throw new CustomForbiddenException('You do not have permission to create a restaurant');
         }
 
@@ -64,9 +72,15 @@ export class RestaurantsService {
             where: { id: restaurantId, ownerId: ownerId },
         });
         if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
-        if(restaurant.ownerId !== ownerId) {
+
+        const isOwner = await this.prisma.user.findUnique({
+            where: { id: ownerId },
+        });
+        if (!isOwner) throw new CustomNotFoundException('Owner not found');
+        if(isOwner.role !== UserRole.SHOP) {
             throw new CustomForbiddenException('You do not have permission to update this restaurant');
         }
+
         return this.prisma.restaurant.update({
             where: { id: restaurantId },
             data: { status: RestaurantStatus.OPEN },
@@ -79,9 +93,15 @@ export class RestaurantsService {
             where: { id: restaurantId, ownerId: ownerId },
         });
         if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
-        if(restaurant.ownerId !== ownerId) {
+        const isOwner = await this.prisma.user.findUnique({
+            where: { id: ownerId },
+        });
+
+        if (!isOwner) throw new CustomNotFoundException('Owner not found');
+        if(isOwner.role !== UserRole.SHOP) {
             throw new CustomForbiddenException('You do not have permission to update this restaurant');
         }
+
         return this.prisma.restaurant.update({
             where: { id: restaurantId },
             data: { status: RestaurantStatus.CLOSED },
@@ -93,24 +113,39 @@ export class RestaurantsService {
             where: { id: restaurantId, ownerId: ownerId },
         });
         if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
-        if(restaurant.ownerId !== ownerId) {
+        const isOwner = await this.prisma.user.findUnique({
+            where: { id: ownerId },
+        });
+        
+        if (!isOwner) throw new CustomNotFoundException('Owner not found');
+        if(isOwner.role !== UserRole.SHOP) {
             throw new CustomForbiddenException('You do not have permission to update this restaurant');
         }
+
         return this.prisma.restaurant.update({
             where: { id: restaurantId },
             data: { status: RestaurantStatus.BUSY },
         });
     }
 
-    async getRestaurantById(restaurantId: string, ownerId: string) {
-        const restaurant = await this.prisma.restaurant.findUnique({
-            where: { id: restaurantId, ownerId: ownerId },
+    async searchRestaurants(ownerId: string, query: FindAllUsersDto) {
+        const { search, status, sortBy, sortOrder, page = 1, limit = 10 } = query;
+
+        const validSortFields = ['name', 'createdAt', 'updatedAt'];
+        const orderByField: string = validSortFields.includes(sortBy ?? '') ? sortBy! : 'createdAt';
+        const orderDirection = sortOrder ?? 'desc';
+
+        return this.prisma.restaurant.findMany({
+            where: {    
+                ...(status && { status }),
+                ...(search && {
+                    name: { contains: search, mode: 'insensitive' },
+                }),
+            },
+            orderBy: { [orderByField]: orderDirection }, 
+            skip: (page - 1) * limit,
+            take: limit,
         });
-        if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
-        if(restaurant.ownerId !== ownerId) {
-            throw new CustomForbiddenException('You do not have permission to view this restaurant');
-        }
-        return restaurant;
     }
     
     async deleteRestaurant(restaurantId: string, ownerId: string) {
@@ -118,7 +153,12 @@ export class RestaurantsService {
             where: { id: restaurantId, ownerId: ownerId },
         });
         if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
-        if(restaurant.ownerId !== ownerId) {
+
+        const isOwner = await this.prisma.user.findUnique({
+            where: { id: ownerId },
+        });
+        if (!isOwner) throw new CustomNotFoundException('Owner not found');
+        if(isOwner.role !== UserRole.SHOP) {
             throw new CustomForbiddenException('You do not have permission to delete this restaurant');
         }
         return this.prisma.restaurant.delete({
@@ -131,9 +171,15 @@ export class RestaurantsService {
             where: { id: restaurantId, ownerId: ownerId },
         });
         if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
-        if(restaurant.ownerId !== ownerId) {
+        const isOwner = await this.prisma.user.findUnique({
+            where: { id: ownerId },
+        });
+
+        if (!isOwner) throw new CustomNotFoundException('Owner not found');
+        if(isOwner.role !== UserRole.SHOP) {
             throw new CustomForbiddenException('You do not have permission to update this restaurant');
         }
+
         return this.prisma.restaurant.update({
             where: { id: restaurantId },
             data: {

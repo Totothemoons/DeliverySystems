@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Req, UseGuards,Body,Param, Delete, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards,Body,Param, Delete, Patch, Query } from '@nestjs/common';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantsDto } from './dto/create.restaurants.dto';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
 import { Role, UserRole } from '../auth/decorator/role.decorator';
+import { FindAllUsersDto } from './dto/search.restaurants.dto';
 
 interface RequestWithUser extends Request {
     user: {sub : string, role: UserRole};
@@ -15,6 +16,14 @@ export class RestaurantsController {
     constructor(private readonly restaurantsService: RestaurantsService) {}
 
     @Get()
+    async searchRestaurants(
+        @Req() req: RequestWithUser, 
+        @Query() query: FindAllUsersDto
+    ) {
+        return this.restaurantsService.searchRestaurants(req.user.sub, query);
+    }
+
+    @Get('all')
     async getAllRestaurants(@Req() req: RequestWithUser) {
         return this.restaurantsService.getAllRestaurants(req.user.sub);
     }
@@ -25,11 +34,6 @@ export class RestaurantsController {
         @Body() createRestaurantsDto: CreateRestaurantsDto
     ) {
         return this.restaurantsService.createRestaurant(createRestaurantsDto, req.user.sub);
-    }
-
-    @Get(':id')
-    async getRestaurantById(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
-        return this.restaurantsService.getRestaurantById(restaurantId, req.user.sub);
     }
 
     @Patch(':id')
@@ -56,4 +60,5 @@ export class RestaurantsController {
     async setBusy(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
         return this.restaurantsService.setBusy(restaurantId, req.user.sub);
     }
+
 }

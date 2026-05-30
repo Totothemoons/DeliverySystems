@@ -112,4 +112,17 @@ export class RestaurantsService {
         }
         return restaurant;
     }
+    
+    async deleteRestaurant(restaurantId: string, ownerId: string) {
+        const restaurant = await this.prisma.restaurant.findUnique({
+            where: { id: restaurantId, ownerId: ownerId },
+        });
+        if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
+        if(restaurant.ownerId !== ownerId) {
+            throw new CustomForbiddenException('You do not have permission to delete this restaurant');
+        }
+        return this.prisma.restaurant.delete({
+            where: { id: restaurantId },
+        });
+    }
 }

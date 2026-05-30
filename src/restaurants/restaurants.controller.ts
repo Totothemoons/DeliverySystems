@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, UseGuards,Body,Param } from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards,Body,Param, Delete } from '@nestjs/common';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantsDto } from './dto/create.restaurants.dto';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
@@ -26,10 +26,15 @@ export class RestaurantsController {
     ) {
         return this.restaurantsService.createRestaurant(createRestaurantsDto, req.user.sub);
     }
-    
+
     @Get(':id')
     async getRestaurantById(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
         return this.restaurantsService.getRestaurantById(restaurantId, req.user.sub);
+    }
+
+    @Delete(':id')
+    async deleteRestaurant(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
+        return this.restaurantsService.deleteRestaurant(restaurantId, req.user.sub);
     }
 
     @Post(':id/open')

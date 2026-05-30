@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, UseGuards,Body,Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards,Body,Param, Delete, Patch } from '@nestjs/common';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantsDto } from './dto/create.restaurants.dto';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
@@ -30,6 +30,11 @@ export class RestaurantsController {
     @Get(':id')
     async getRestaurantById(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
         return this.restaurantsService.getRestaurantById(restaurantId, req.user.sub);
+    }
+
+    @Patch(':id')
+    async updateRestaurant(@Req() req: RequestWithUser, @Param('id') restaurantId: string, @Body() updateRestaurantsDto: Partial<CreateRestaurantsDto>) {
+        return this.restaurantsService.updateRestaurant(restaurantId, req.user.sub, updateRestaurantsDto);
     }
 
     @Delete(':id')

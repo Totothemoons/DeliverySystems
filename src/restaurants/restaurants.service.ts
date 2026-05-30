@@ -125,4 +125,27 @@ export class RestaurantsService {
             where: { id: restaurantId },
         });
     }
+
+    async updateRestaurant(restaurantId: string, ownerId: string, updateRestaurantsDto: Partial<CreateRestaurantsDto>) {
+        const restaurant = await this.prisma.restaurant.findUnique({
+            where: { id: restaurantId, ownerId: ownerId },
+        });
+        if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
+        if(restaurant.ownerId !== ownerId) {
+            throw new CustomForbiddenException('You do not have permission to update this restaurant');
+        }
+        return this.prisma.restaurant.update({
+            where: { id: restaurantId },
+            data: {
+                name: updateRestaurantsDto.name ?? restaurant.name,
+                description: updateRestaurantsDto.description ?? restaurant.description,
+                phone: updateRestaurantsDto.phone ?? restaurant.phone,
+                restaurantImageUrl: updateRestaurantsDto.restaurantImageUrl ?? restaurant.restaurantImageUrl,
+                address: updateRestaurantsDto.address ?? restaurant.address,
+                latitude: updateRestaurantsDto.latitude ?? restaurant.latitude,
+                longitude: updateRestaurantsDto.longitude ?? restaurant.longitude,
+                status: updateRestaurantsDto.status ?? restaurant.status
+            },
+        });
+    }
 }

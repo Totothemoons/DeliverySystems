@@ -101,4 +101,15 @@ export class RestaurantsService {
             data: { status: RestaurantStatus.BUSY },
         });
     }
+
+    async getRestaurantById(restaurantId: string, ownerId: string) {
+        const restaurant = await this.prisma.restaurant.findUnique({
+            where: { id: restaurantId, ownerId: ownerId },
+        });
+        if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
+        if(restaurant.ownerId !== ownerId) {
+            throw new CustomForbiddenException('You do not have permission to view this restaurant');
+        }
+        return restaurant;
+    }
 }

@@ -26,6 +26,11 @@ export class RestaurantsController {
     ) {
         return this.restaurantsService.createRestaurant(createRestaurantsDto, req.user.sub);
     }
+    
+    @Get(':id')
+    async getRestaurantById(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
+        return this.restaurantsService.getRestaurantById(restaurantId, req.user.sub);
+    }
 
     @Post(':id/open')
     async setOpen(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {

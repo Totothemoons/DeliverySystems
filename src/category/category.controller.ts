@@ -3,6 +3,7 @@ import { Request } from 'express';
 import { CategoryService } from './category.service.js';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard.js';
 import { Role, UserRole } from '../auth/decorator/role.decorator.js';
+import { CreateCategoryDto } from './dto/create.category.dto.js';
  
 interface RequestWithUser extends Request {
   user: { sub: string; role: string };
@@ -16,4 +17,11 @@ export class CategoryController {
     async getCategories() {
         return this.categoryService.getCategories();
     }
+
+  @Post()
+  @UseGuards(AccessTokenGuard)
+  @Role(UserRole.ADMIN)
+  async createCategory(@Body() dto: CreateCategoryDto, @Req() req: RequestWithUser) {
+    return this.categoryService.createCategory(dto, req.user.sub);
+  }
 }

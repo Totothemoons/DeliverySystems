@@ -10,13 +10,14 @@ import { MaillerModule } from './mailler/mailler.module';
 import { UserModule } from './user/user.module';
 import { AddressModule } from './address/address.module';
 import { DriverModule } from './driver/driver.module';
+import { RestaurantsModule } from './restaurants/restaurants.module';
 
 @Module({
 
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv,
-  }), PrismaModule, AuthModule, MaillerModule, UserModule, AddressModule, DriverModule],
+  }), PrismaModule, AuthModule, MaillerModule, UserModule, AddressModule, DriverModule, RestaurantsModule],
 
   controllers: [AppController],
   providers: [AppService],

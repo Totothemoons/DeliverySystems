@@ -12,13 +12,15 @@ import { AddressModule } from './address/address.module';
 import { DriverModule } from './driver/driver.module';
 import { RestaurantsModule } from './restaurants/restaurants.module';
 import { CategoryModule } from './category/category.module';
+import { MenuItemsModule } from './menu-items/menu-items.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
 
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv,
-  }), PrismaModule, AuthModule, MaillerModule, UserModule, AddressModule, DriverModule, RestaurantsModule, CategoryModule],
+  }), PrismaModule, AuthModule, MaillerModule, UserModule, AddressModule, DriverModule, RestaurantsModule, CategoryModule, MenuItemsModule, CloudinaryModule],
 
   controllers: [AppController],
   providers: [AppService],

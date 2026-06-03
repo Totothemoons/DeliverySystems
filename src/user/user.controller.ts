@@ -10,11 +10,15 @@ import {
     UseGuards,
     HttpCode,
     HttpStatus,
+    UseInterceptors,
+    UploadedFile,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { Request } from 'express';
 import { UpdateProfileDto } from './dto/update-profile.dto'
 import { AccessTokenGuard } from '../auth/guard/access-token.guard'
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 interface RequestWithUser extends Request {
   user: { sub: string; [key: string]: any };
@@ -42,6 +46,20 @@ export class UserController {
   ) {
     return this.userService.updateProfile(req.user.sub, dto);
   }
+
+  @Post('me/avatar')
+    @UseInterceptors(
+        FileInterceptor('avatar', {
+            storage: memoryStorage(),                    
+            limits: { fileSize: 5 * 1024 * 1024 },      
+        }),
+    )
+    async uploadAvatar(
+        @Req() req: RequestWithUser,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        return this.userService.uploadAvatar(req.user.sub, file);
+    }
  
   @Patch('me/deactivate')
   @HttpCode(HttpStatus.OK)

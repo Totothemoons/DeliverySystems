@@ -7,10 +7,13 @@ import { CustomForbiddenException } from '../common/exception/forbidden.exceptio
 import { CustomBadRequestException } from '../common/exception/bad-request.exception';
 import { ConflictException } from '@nestjs/common';
 import { FindAllUsersDto } from './dto/search.restaurants.dto';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class RestaurantsService {
-    constructor(private readonly prisma: PrismaService){}
+    constructor(
+        private readonly prisma: PrismaService, 
+        private readonly cloudinary: CloudinaryService){}
 
     async getAllRestaurants(ownerId: string) {
         const restaurants = await this.prisma.restaurant.findMany({
@@ -186,7 +189,6 @@ export class RestaurantsService {
                 name: updateRestaurantsDto.name ?? restaurant.name,
                 description: updateRestaurantsDto.description ?? restaurant.description,
                 phone: updateRestaurantsDto.phone ?? restaurant.phone,
-                restaurantImageUrl: updateRestaurantsDto.restaurantImageUrl ?? restaurant.restaurantImageUrl,
                 address: updateRestaurantsDto.address ?? restaurant.address,
                 latitude: updateRestaurantsDto.latitude ?? restaurant.latitude,
                 longitude: updateRestaurantsDto.longitude ?? restaurant.longitude,
@@ -194,4 +196,34 @@ export class RestaurantsService {
             },
         });
     }
+
+    async uploadRestaurantImage(
+        restaurantId: string,
+        ownerId: string, 
+        role: UserRole,
+        file: Express.Multer.File
+    ) {
+        if(!file) throw new CustomBadRequestException('Image file is required');
+
+        if(role !== UserRole.SHOP) {
+            throw new CustomForbiddenException('You do not have permission to update this restaurant');
+        }
+        const restaurant = await this.prisma.restaurant.findUnique({
+            where: { id: restaurantId, ownerId: ownerId },
+        });
+        if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
+
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+            throw new CustomBadRequestException('Only JPEG, PNG, WebP allowed');
+        }
+
+        const url = await this.cloudinary.uploadFile(file, 'restaurant-images');
+
+        return this.prisma.restaurant.update({
+            where: { id: restaurantId },
+            data: { restaurantImageUrl: url },
+        })
+    }
+        
 }

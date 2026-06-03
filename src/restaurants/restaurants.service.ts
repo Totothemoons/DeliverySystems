@@ -128,7 +128,7 @@ export class RestaurantsService {
         });
     }
 
-    async searchRestaurants(ownerId: string, query: FindAllUsersDto) {
+    async searchRestaurants(query: FindAllUsersDto) {
         const { search, status, sortBy, sortOrder, page = 1, limit = 10 } = query;
 
         const validSortFields = ['name', 'createdAt', 'updatedAt'];

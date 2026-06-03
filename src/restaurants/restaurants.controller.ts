@@ -20,7 +20,7 @@ export class RestaurantsController {
         @Req() req: RequestWithUser, 
         @Query() query: FindAllUsersDto
     ) {
-        return this.restaurantsService.searchRestaurants(req.user.sub, query);
+        return this.restaurantsService.searchRestaurants(query);
     }
 
     @Get('all')

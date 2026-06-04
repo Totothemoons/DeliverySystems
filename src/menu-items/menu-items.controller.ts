@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, UseGuards, Param , Body, Patch} from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards, Param , Body, Patch, Delete, HttpCode, HttpStatus} from '@nestjs/common';
 import { MenuItemsService } from './menu-items.service';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
 import { Role, UserRole } from '../auth/decorator/role.decorator';
@@ -41,6 +41,20 @@ export class MenuItemsController {
       restaurantId,
       menuItemId,
       dto,
+    );
+  }
+
+  @Delete(':restaurantId/:menuItemId')
+  @HttpCode(HttpStatus.OK)
+  async deleteMenuItem(
+    @Req() req: RequestWithUser,
+    @Param('restaurantId') restaurantId: string,
+    @Param('menuItemId') menuItemId: string,
+  ) {
+    return this.menuItemsService.deleteMenuItem(
+      req.user.sub,
+      restaurantId,
+      menuItemId,
     );
   }
 

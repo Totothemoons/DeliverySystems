@@ -125,4 +125,18 @@ export class MenuItemsService {
             },
         });
     }
+    async deleteMenuItem(
+        ownerId: string,
+        restaurantId: string,
+        menuItemId: string,
+    ) {
+        await this.validateRestaurantOwner(ownerId, restaurantId);
+        await this.validateMenuItem(menuItemId, restaurantId);
+    
+        await this.prisma.menuItem.delete({
+            where: { id: menuItemId },
+        });
+    
+        return { message: 'Menu item deleted successfully' };
+    }
 }

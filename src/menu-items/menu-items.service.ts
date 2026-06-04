@@ -44,4 +44,22 @@ export class MenuItemsService {
 
         return { message: 'Menu item created successfully' };
     }
+
+    async getMenuItems(restaurantId: string) {
+        const restaurant = await this.prisma.restaurant.findUnique({
+            where: { id: restaurantId },
+        });
+        if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
+    
+        return this.prisma.menuItem.findMany({
+            where: {
+                restaurantId,
+                deletedAt: null, 
+            },
+            include: {
+                category: { select: { id: true, name: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
 }

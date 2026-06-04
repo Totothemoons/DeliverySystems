@@ -14,10 +14,15 @@ interface RequestWithUser extends Request {
 export class MenuItemsController {
   constructor(private readonly menuItemsService: MenuItemsService) {}
 
-  @Post(':id')
+  @Get(':restaurantId/all')
+  async getMenuItems(@Param('restaurantId') restaurantId: string) {
+    return this.menuItemsService.getMenuItems(restaurantId);
+  }
+
+  @Post(':restaurantId')
   async createMenuItem(
     @Req() req: RequestWithUser,
-    @Param('id') restaurantId: string,
+    @Param('restaurantId') restaurantId: string,
     @Body() createMenuItemDto: CreateMenuItemDto
   ){
     return this.menuItemsService.createMenuItem(req.user.sub, req.user.role,restaurantId, createMenuItemDto);

@@ -7,6 +7,7 @@ import { CustomNotFoundException } from '../common/exception/not-found.exception
 import { CreateMenuItemDto } from './dto/create.menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update.menu-item.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { v2 as cloudinary } from 'cloudinary';
 
 @Injectable()
 export class MenuItemsService {
@@ -14,7 +15,6 @@ export class MenuItemsService {
         private readonly prisma: PrismaService,
         private readonly cloudinaryService: CloudinaryService
     ) {}
-
     private async validateRestaurantOwner(ownerId: string, restaurantId: string) {
         const restaurant = await this.prisma.restaurant.findUnique({
             where: { id: restaurantId },
@@ -154,7 +154,12 @@ export class MenuItemsService {
         }
 
         await this.validateRestaurantOwner(ownerId, restaurantId);
-        await this.validateMenuItem(menuItemId, restaurantId);
+        const menu_item = await this.validateMenuItem(menuItemId, restaurantId);
+
+        if (menu_item.imageUrl) {
+            const publicId = this.cloudinaryService.extractPublicId(menu_item.imageUrl);
+            await this.cloudinaryService.deleteFile(publicId);
+        }
 
         const url = await this.cloudinaryService.uploadFile(file, 'menu-items');
 

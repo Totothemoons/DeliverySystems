@@ -21,4 +21,13 @@ export class CloudinaryService {
   async deleteFile(publicId: string) {
     return cloudinary.uploader.destroy(publicId);
   }
+
+  extractPublicId(url: string): string {
+        const parts = url.split('/');
+        const uploadIndex = parts.indexOf('upload');
+        const pathParts = parts.slice(uploadIndex + 2); 
+        const filename = pathParts[pathParts.length - 1].split('.')[0]; 
+        pathParts[pathParts.length - 1] = filename;
+        return pathParts.join('/'); // restaurant-images/abc
+    }
 }

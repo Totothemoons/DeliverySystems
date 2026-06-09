@@ -8,13 +8,14 @@ import { CustomBadRequestException } from '../common/exception/bad-request.excep
 import { ConflictException } from '@nestjs/common';
 import { FindAllUsersDto } from './dto/search.restaurants.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { v2 as cloudinary } from 'cloudinary';
 
 @Injectable()
 export class RestaurantsService {
     constructor(
         private readonly prisma: PrismaService, 
         private readonly cloudinary: CloudinaryService){}
-
+    
     async getAllRestaurants(ownerId: string) {
         const restaurants = await this.prisma.restaurant.findMany({
             where: { ownerId: ownerId },
@@ -216,6 +217,11 @@ export class RestaurantsService {
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!allowedMimeTypes.includes(file.mimetype)) {
             throw new CustomBadRequestException('Only JPEG, PNG, WebP allowed');
+        }
+
+        if (restaurant.restaurantImageUrl) {
+            const publicId = this.cloudinary.extractPublicId(restaurant.restaurantImageUrl);
+            await this.cloudinary.deleteFile(publicId);
         }
 
         const url = await this.cloudinary.uploadFile(file, 'restaurant-images');

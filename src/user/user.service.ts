@@ -4,13 +4,14 @@ import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { CustomBadRequestException } from '../common/exception/bad-request.exception.js';
 import { CustomNotFoundException } from '../common/exception/not-found.exception.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
+import { v2 as cloudinary } from 'cloudinary';
 
 @Injectable()
 export class UserService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly cloudinary: CloudinaryService) {}
-  
+    
     async getProfile(userId: string) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
@@ -98,11 +99,21 @@ export class UserService {
     async uploadAvatar(userId: string, file: Express.Multer.File) {
         if (!file) throw new CustomBadRequestException('No file uploaded');
 
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+    
+        if (!user) throw new CustomNotFoundException('User not found');
+
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!allowedMimeTypes.includes(file.mimetype)) {
             throw new CustomBadRequestException('Only JPEG, PNG, WebP allowed');
         }
 
+        if(user.profileImageUrl) {
+            const publicId = this.cloudinary.extractPublicId(user.profileImageUrl);
+            await this.cloudinary.deleteFile(publicId);
+        }
         const url = await this.cloudinary.uploadFile(file, 'avatars');
 
         return this.prisma.user.update({

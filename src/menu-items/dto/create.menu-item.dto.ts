@@ -1,4 +1,4 @@
-import {IsNotEmpty, IsNumber, IsOptional, IsString} from 'class-validator'
+import {IsNotEmpty, IsNumber, IsOptional, IsString, IsBoolean} from 'class-validator'
 
 export class CreateMenuItemDto {
 
@@ -23,7 +23,7 @@ export class CreateMenuItemDto {
     @IsOptional()
     imageUrl?: string
 
-    @IsOptional()
+    @IsBoolean()
     isAvailable!: boolean
 
     @IsNotEmpty()

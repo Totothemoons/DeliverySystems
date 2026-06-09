@@ -8,6 +8,7 @@ import { CreateMenuItemDto } from './dto/create.menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update.menu-item.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { v2 as cloudinary } from 'cloudinary';
+import { QueryMenuItem } from './dto/search.menu-item.dto';
 
 @Injectable()
 export class MenuItemsService {
@@ -169,6 +170,30 @@ export class MenuItemsService {
             include: {
                 category: { select: { id: true, name: true } },
             },
+        });
+    }
+
+    async searchMenuItem(query : QueryMenuItem){
+        const { search , price , isAvailable, sortBy, sortOrder, page = 1, limit = 10 } = query;
+
+        const validSortFields = ['name', 'price' , 'createdAt', 'updatedAt'];
+        const orderField : string = validSortFields.includes(sortBy ?? '') ? sortBy! : 'createdAt';
+        const orderDirection = sortOrder ?? 'desc';
+
+        return await this.prisma.menuItem.findMany({
+            where : {
+                ...(isAvailable && {isAvailable}),
+                ...(price && {
+                    price : { gte : 0}
+                }),
+                ...(search  && {
+                    name: { contains: search, mode: 'insensitive'}
+                })
+            },
+            orderBy: { [orderField] : orderDirection},
+            skip: (page - 1) * limit,
+            take: limit,
+
         });
     }
 }

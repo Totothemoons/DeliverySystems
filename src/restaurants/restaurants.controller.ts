@@ -25,14 +25,12 @@ interface RequestWithUser extends Request {
 }
 
 @UseGuards(AccessTokenGuard)
-@Role(UserRole.SHOP)
 @Controller('restaurants')
 export class RestaurantsController {
     constructor(private readonly restaurantsService: RestaurantsService) {}
 
     @Get()
     async searchRestaurants(
-        @Req() req: RequestWithUser, 
         @Query() query: FindAllUsersDto
     ) {
         return this.restaurantsService.searchRestaurants(query);
@@ -43,6 +41,7 @@ export class RestaurantsController {
         return this.restaurantsService.getAllRestaurants(req.user.sub);
     }
 
+    @Role(UserRole.SHOP)
     @Post()
     async createRestaurant(
         @Req() req: RequestWithUser,
@@ -50,7 +49,8 @@ export class RestaurantsController {
     ) {
         return this.restaurantsService.createRestaurant(createRestaurantsDto, req.user.sub);
     }
-    
+
+    @Role(UserRole.SHOP)
     @Post(':id/restaurant-image')
     @UseInterceptors(
         FileInterceptor('restaurant-image', {
@@ -58,6 +58,8 @@ export class RestaurantsController {
             limits: { fileSize: 5 * 1024 * 1024 }, 
         }),
     )
+
+    @Role(UserRole.SHOP)
     async uploadRestaurantImage(
         @Req() req: RequestWithUser,
         @Param('id') restaurantId: string,
@@ -66,26 +68,31 @@ export class RestaurantsController {
         return this.restaurantsService.uploadRestaurantImage(restaurantId, req.user.sub,req.user.role, file);
     }
 
+    @Role(UserRole.SHOP)
     @Patch(':id')
     async updateRestaurant(@Req() req: RequestWithUser, @Param('id') restaurantId: string, @Body() updateRestaurantsDto: Partial<CreateRestaurantsDto>) {
         return this.restaurantsService.updateRestaurant(restaurantId, req.user.sub, updateRestaurantsDto);
     }
 
+    @Role(UserRole.SHOP)
     @Delete(':id')
     async deleteRestaurant(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
         return this.restaurantsService.deleteRestaurant(restaurantId, req.user.sub);
     }
 
+    @Role(UserRole.SHOP)
     @Post(':id/open')
     async setOpen(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
         return this.restaurantsService.setOpen(restaurantId, req.user.sub);
     }
 
+    @Role(UserRole.SHOP)
     @Post(':id/closed')
     async setClosed(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
         return this.restaurantsService.setClosed(restaurantId, req.user.sub);
     }
 
+    @Role(UserRole.SHOP)
     @Post(':id/busy')
     async setBusy(@Req() req: RequestWithUser, @Param('id') restaurantId: string) {
         return this.restaurantsService.setBusy(restaurantId, req.user.sub);

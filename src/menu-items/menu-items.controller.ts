@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, UseGuards, Param , Body, Patch, Delete, UploadedFile,UseInterceptors,HttpCode, HttpStatus} from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards, Param , Body, Patch, Delete, UploadedFile,UseInterceptors,HttpCode, HttpStatus, Query} from '@nestjs/common';
 import { MenuItemsService } from './menu-items.service';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
 import { Role, UserRole } from '../auth/decorator/role.decorator';
@@ -6,21 +6,28 @@ import { CreateMenuItemDto } from './dto/create.menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update.menu-item.dto';
 import { memoryStorage } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { QueryMenuItem } from './dto/search.menu-item.dto'
+
 interface RequestWithUser extends Request {
   user: {sub : string , role: UserRole};
 }
 
 @UseGuards(AccessTokenGuard)
-@Role(UserRole.SHOP)
 @Controller('menu-items')
 export class MenuItemsController {
   constructor(private readonly menuItemsService: MenuItemsService) {}
+
+  @Get()
+  async searchMenuItem(@Query() query: QueryMenuItem) {
+    return this.menuItemsService.searchMenuItem(query);
+  }
 
   @Get(':restaurantId/all')
   async getMenuItems(@Param('restaurantId') restaurantId: string) {
     return this.menuItemsService.getMenuItems(restaurantId);
   }
 
+  @Role(UserRole.SHOP)
   @Post(':restaurantId')
   async createMenuItem(
     @Req() req: RequestWithUser,
@@ -30,6 +37,7 @@ export class MenuItemsController {
     return this.menuItemsService.createMenuItem(req.user.sub, req.user.role,restaurantId, createMenuItemDto);
   }
 
+  @Role(UserRole.SHOP)
   @Post(':restaurantId/:menuItemId/image')
     @UseInterceptors(
        FileInterceptor('MenuItemImage', {
@@ -46,7 +54,7 @@ export class MenuItemsController {
         return this.menuItemsService.uploadMenuItemImage(req.user.sub, restaurantId,menuItemId, file);
     }
   
-
+  @Role(UserRole.SHOP)
   @Patch(':restaurantId/:menuItemId')
   async updateMenuItem(
     @Req() req: RequestWithUser,
@@ -61,7 +69,8 @@ export class MenuItemsController {
       dto,
     );
   }
-
+  
+  @Role(UserRole.SHOP)
   @Delete(':restaurantId/:menuItemId')
   @HttpCode(HttpStatus.OK)
   async deleteMenuItem(

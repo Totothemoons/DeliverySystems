@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Req, UseGuards, Param , Body, Patch, Delete, HttpCode, HttpStatus} from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards, Param , Body, Patch, Delete, UploadedFile,UseInterceptors,HttpCode, HttpStatus} from '@nestjs/common';
 import { MenuItemsService } from './menu-items.service';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard';
 import { Role, UserRole } from '../auth/decorator/role.decorator';
 import { CreateMenuItemDto } from './dto/create.menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update.menu-item.dto';
-
+import { memoryStorage } from 'multer';
+import { FileInterceptor } from '@nestjs/platform-express';
 interface RequestWithUser extends Request {
   user: {sub : string , role: UserRole};
 }
@@ -28,6 +29,23 @@ export class MenuItemsController {
   ){
     return this.menuItemsService.createMenuItem(req.user.sub, req.user.role,restaurantId, createMenuItemDto);
   }
+
+  @Post(':restaurantId/:menuItemId/image')
+    @UseInterceptors(
+       FileInterceptor('MenuItemImage', {
+       storage: memoryStorage(),
+       limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+     }),
+    )
+    async uploadMenuItemImage(
+        @Req() req: RequestWithUser,
+        @Param('restaurantId') restaurantId: string,
+        @Param('menuItemId') menuItemId: string,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        return this.menuItemsService.uploadMenuItemImage(req.user.sub, restaurantId,menuItemId, file);
+    }
+  
 
   @Patch(':restaurantId/:menuItemId')
   async updateMenuItem(

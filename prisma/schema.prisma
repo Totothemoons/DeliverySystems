@@ -8,30 +8,31 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(uuid()) @db.Uuid
-  email               String?              @unique @db.VarChar(255)
-  password            String?              @db.VarChar(255)
-  fullname            String               @db.VarChar(255)
-  phone               String?              @unique @db.VarChar(20)
-  role                UserRole
-  authProvider        AuthProvider         @default(LOCAL) @map("auth_provider")
-  providerId          String?              @map("provider_id") @db.VarChar(255)
-  profileImageUrl     String?              @map("profile_image_url")
-  isActive            Boolean              @default(true) @map("is_active")
-  createdAt           DateTime             @default(now()) @map("created_at")
-  updatedAt           DateTime             @updatedAt @map("updated_at")
-  addresses           Address[]
-  deliveries          Delivery[]
-  driverLocation      DriverLocation?
-  driverProfile       DriverProfile?
-  receivedMessages    Message[]            @relation("ReceiverMessages")
-  sentMessages        Message[]            @relation("SenderMessages")
-  customerOrders      Order[]              @relation("CustomerOrders")
-  driverOrders        Order[]              @relation("DriverOrders")
-  passwordResetTokens PasswordResetToken[]
-  refreshTokens       RefreshToken[]
-  restaurants         Restaurant[]
-  transactionLogs     TransactionLog[]
+  id                   String               @id @default(uuid()) @db.Uuid
+  email                String?              @unique @db.VarChar(255)
+  password             String?              @db.VarChar(255)
+  fullname             String               @db.VarChar(255)
+  phone                String?              @unique @db.VarChar(20)
+  role                 UserRole
+  authProvider         AuthProvider         @default(LOCAL) @map("auth_provider")
+  providerId           String?              @map("provider_id") @db.VarChar(255)
+  profileImageUrl      String?              @map("profile_image_url")
+  profileImagePublicId String?              @map("profile_image_public_id")
+  isActive             Boolean              @default(true) @map("is_active")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+  addresses            Address[]
+  deliveries           Delivery[]
+  driverLocation       DriverLocation?
+  driverProfile        DriverProfile?
+  receivedMessages     Message[]            @relation("ReceiverMessages")
+  sentMessages         Message[]            @relation("SenderMessages")
+  customerOrders       Order[]              @relation("CustomerOrders")
+  driverOrders         Order[]              @relation("DriverOrders")
+  passwordResetTokens  PasswordResetToken[]
+  refreshTokens        RefreshToken[]
+  restaurants          Restaurant[]
+  transactionLogs      TransactionLog[]
 
   @@map("users")
 }
@@ -69,21 +70,22 @@ model DriverProfile {
 }
 
 model Restaurant {
-  id                 String           @id @default(uuid()) @db.Uuid
-  ownerId            String           @map("owner_id") @db.Uuid
-  name               String           @db.VarChar(255)
-  description        String?
-  phone              String           @db.VarChar(20)
-  restaurantImageUrl String?          @map("restaurant_image_url")
-  address            String
-  latitude           Decimal          @db.Decimal(10, 8)
-  longitude          Decimal          @db.Decimal(11, 8)
-  status             RestaurantStatus
-  createdAt          DateTime         @default(now()) @map("created_at")
-  updatedAt          DateTime         @updatedAt @map("updated_at")
-  menuItems          MenuItem[]
-  orders             Order[]
-  owner              User             @relation(fields: [ownerId], references: [id])
+  id                      String           @id @default(uuid()) @db.Uuid
+  ownerId                 String           @map("owner_id") @db.Uuid
+  name                    String           @db.VarChar(255)
+  description             String?
+  phone                   String           @db.VarChar(20)
+  restaurantImageUrl      String?          @map("restaurant_image_url")
+  restaurantImagePublicId String?          @map("restaurant_image_public_id")
+  address                 String
+  latitude                Decimal          @db.Decimal(10, 8)
+  longitude               Decimal          @db.Decimal(11, 8)
+  status                  RestaurantStatus
+  createdAt               DateTime         @default(now()) @map("created_at")
+  updatedAt               DateTime         @updatedAt @map("updated_at")
+  menuItems               MenuItem[]
+  orders                  Order[]
+  owner                   User             @relation(fields: [ownerId], references: [id])
 
   @@map("restaurants")
 }
@@ -97,21 +99,22 @@ model Category {
 }
 
 model MenuItem {
-  id           String      @id @default(uuid()) @db.Uuid
-  restaurantId String      @map("restaurant_id") @db.Uuid
-  categoryId   String      @map("category_id") @db.Uuid
-  name         String      @db.VarChar(255)
-  description  String?
-  price        Decimal     @db.Decimal(10, 2)
-  stock        Int
-  imageUrl     String?     @map("image_url")
-  isAvailable  Boolean     @default(true) @map("is_available")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  deletedAt    DateTime?   @map("deleted_at")
-  category     Category    @relation(fields: [categoryId], references: [id])
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
-  orderItems   OrderItem[]
+  id            String      @id @default(uuid()) @db.Uuid
+  restaurantId  String      @map("restaurant_id") @db.Uuid
+  categoryId    String      @map("category_id") @db.Uuid
+  name          String      @db.VarChar(255)
+  description   String?
+  price         Decimal     @db.Decimal(10, 2)
+  sold          Int
+  imageUrl      String?     @map("image_url")
+  imagePublicId String?     @map("image_public_id")
+  isAvailable   Boolean     @default(true) @map("is_available")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+  deletedAt     DateTime?   @map("deleted_at")
+  category      Category    @relation(fields: [categoryId], references: [id])
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
+  orderItems    OrderItem[]
 
   @@map("menu_items")
 }

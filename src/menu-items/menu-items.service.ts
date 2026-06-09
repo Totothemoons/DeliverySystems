@@ -6,9 +6,14 @@ import { CustomForbiddenException } from '../common/exception/forbidden.exceptio
 import { CustomNotFoundException } from '../common/exception/not-found.exception';
 import { CreateMenuItemDto } from './dto/create.menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update.menu-item.dto';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+
 @Injectable()
 export class MenuItemsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly cloudinaryService: CloudinaryService
+    ) {}
 
     private async validateRestaurantOwner(ownerId: string, restaurantId: string) {
         const restaurant = await this.prisma.restaurant.findUnique({
@@ -62,7 +67,7 @@ export class MenuItemsService {
                 name: createMenuItemDto.name,
                 description: createMenuItemDto.description,
                 price: createMenuItemDto.price,
-                stock: 0, // default 0
+                sold: 0, // default 0
                 isAvailable: createMenuItemDto.isAvailable,
                 restaurantId: restaurantId,
                 categoryId: createMenuItemDto.categoryId, 
@@ -139,4 +144,28 @@ export class MenuItemsService {
     
         return { message: 'Menu item deleted successfully' };
     }
+
+    async uploadMenuItemImage(ownerId: string, restaurantId: string, menuItemId: string, file: Express.Multer.File) {
+        if (!file) throw new CustomBadRequestException('No file uploaded');
+        
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+            throw new CustomBadRequestException('Only JPEG, PNG, WebP allowed');
+        }
+
+        await this.validateRestaurantOwner(ownerId, restaurantId);
+        await this.validateMenuItem(menuItemId, restaurantId);
+
+        const url = await this.cloudinaryService.uploadFile(file, 'menu-items');
+
+        return this.prisma.menuItem.update({
+            where: { id: menuItemId },
+            data: { imageUrl: url },
+            include: {
+                category: { select: { id: true, name: true } },
+            },
+        });
+    }
 }
+        
+    

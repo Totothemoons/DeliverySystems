@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '../auth/decorator/role.decorator';
 import { CustomBadRequestException } from '../common/exception/bad-request.exception';
@@ -9,12 +9,16 @@ import { UpdateMenuItemDto } from './dto/update.menu-item.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { v2 as cloudinary } from 'cloudinary';
 import { QueryMenuItem } from './dto/search.menu-item.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class MenuItemsService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly cloudinaryService: CloudinaryService
+        private readonly cloudinaryService: CloudinaryService,
+        @Inject(CACHE_MANAGER)
+        private cacheManager : Cache,
     ) {}
     private async validateRestaurantOwner(ownerId: string, restaurantId: string) {
         const restaurant = await this.prisma.restaurant.findUnique({
@@ -74,17 +78,26 @@ export class MenuItemsService {
                 categoryId: createMenuItemDto.categoryId, 
             }
         });
+        await this.cacheManager.del(`menu-item:${restaurantId}`);
 
         return { message: 'Menu item created successfully' };
     }
 
     async getMenuItems(restaurantId: string) {
+        const key = `menu-item:${restaurantId}`;
+    
+        const cache = await this.cacheManager.get(key);
+        if (cache) {
+            console.log('CACHE HIT');
+            return cache;
+        }
+
         const restaurant = await this.prisma.restaurant.findUnique({
             where: { id: restaurantId },
         });
         if (!restaurant) throw new CustomNotFoundException('Restaurant not found');
     
-        return this.prisma.menuItem.findMany({
+        const data = await this.prisma.menuItem.findMany({
             where: {
                 restaurantId,
                 deletedAt: null, 
@@ -94,6 +107,11 @@ export class MenuItemsService {
             },
             orderBy: { createdAt: 'desc' },
         });
+
+        await this.cacheManager.set(key, data, 60000);
+        console.log('CACHE SET:', key);
+        
+        return data;
     }
 
     async updateMenuItem(

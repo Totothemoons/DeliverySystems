@@ -4,7 +4,8 @@ import { CategoryService } from './category.service.js';
 import { AccessTokenGuard } from '../auth/guard/access-token.guard.js';
 import { Role, UserRole } from '../auth/decorator/role.decorator.js';
 import { CreateCategoryDto } from './dto/create.category.dto.js';
- 
+import { CacheTTL } from '@nestjs/cache-manager';
+
 interface RequestWithUser extends Request {
   user: { sub: string; role: string };
 }
@@ -14,6 +15,7 @@ export class CategoryController {
     constructor(private readonly categoryService: CategoryService) {}
 
     @Get()
+    @CacheTTL(6000)
     async getCategories() {
         return this.categoryService.getCategories();
     }

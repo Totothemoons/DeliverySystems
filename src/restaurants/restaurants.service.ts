@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRestaurantsDto, RestaurantStatus } from './dto/create.restaurants.dto';
 import { UserRole } from '../auth/decorator/role.decorator';
@@ -9,14 +9,26 @@ import { ConflictException } from '@nestjs/common';
 import { FindAllUsersDto } from './dto/search.restaurants.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { v2 as cloudinary } from 'cloudinary';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class RestaurantsService {
     constructor(
         private readonly prisma: PrismaService, 
-        private readonly cloudinary: CloudinaryService){}
+        private readonly cloudinary: CloudinaryService,
+        @Inject(CACHE_MANAGER)
+        private cacheManager : Cache,
+    ){}
     
     async getAllRestaurants(ownerId: string) {
+        const key = `restaurants:${ownerId}`;
+        const cache = await this.cacheManager.get(key);
+
+        if(cache){
+            return cache;
+        }
+
         const restaurants = await this.prisma.restaurant.findMany({
             where: { ownerId: ownerId },
         });
@@ -31,6 +43,7 @@ export class RestaurantsService {
             throw new CustomForbiddenException('You do not have permission to view these restaurants');
         }
         
+        await this.cacheManager.set(key, restaurants, 6000);
         return restaurants;
     }
 
@@ -65,6 +78,7 @@ export class RestaurantsService {
                 status: RestaurantStatus.OPEN
             },
         });
+        await this.cacheManager.del(`restaurants:${ownerId}`);
     }
 
     async setOpen(restaurantId: string, ownerId: string) {

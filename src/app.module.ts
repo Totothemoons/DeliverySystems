@@ -14,13 +14,47 @@ import { RestaurantsModule } from './restaurants/restaurants.module';
 import { CategoryModule } from './category/category.module';
 import { MenuItemsModule } from './menu-items/menu-items.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
-
+import { OrderModule } from './order/order.module';
+import { CacheModule} from '@nestjs/cache-manager';
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
 @Module({
 
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv,
-  }), PrismaModule, AuthModule, MaillerModule, UserModule, AddressModule, DriverModule, RestaurantsModule, CategoryModule, MenuItemsModule, CloudinaryModule],
+  }), 
+  PrismaModule,
+  AuthModule,
+  MaillerModule,
+  UserModule,
+  AddressModule,
+  DriverModule,
+  RestaurantsModule,
+  CategoryModule,
+  MenuItemsModule, 
+  CloudinaryModule,
+  OrderModule,
+  CacheModule.registerAsync({
+  isGlobal: true,
+  inject: [ConfigService],
+  useFactory: async (config: ConfigService) => {
+    const host = config.get<string>('REDIS_HOST');
+    const port = config.get<number>('REDIS_PORT');
+
+    const keyv = new Keyv({
+      store: new KeyvRedis(`redis://${host}:${port}`),
+      namespace: undefined, 
+      useKeyPrefix: false,  
+    });
+
+    return {
+      stores: [keyv],
+    };
+  },
+})
+
+],
 
   controllers: [AppController],
   providers: [AppService],

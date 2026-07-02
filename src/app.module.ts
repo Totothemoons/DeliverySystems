@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, Global, ExecutionContext } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -18,11 +18,15 @@ import { OrderModule } from './order/order.module';
 import { CacheModule} from '@nestjs/cache-manager';
 import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
+import { ThrottlerModule, seconds, minutes, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+
+@Global()
 @Module({
 
-  imports: [ConfigModule.forRoot({
-    isGlobal: true,
-    validate: validateEnv,
+imports: [ConfigModule.forRoot({
+  isGlobal: true,
+  validate: validateEnv,
   }), 
   PrismaModule,
   AuthModule,
@@ -52,12 +56,50 @@ import KeyvRedis from '@keyv/redis';
       stores: [keyv],
     };
   },
-})
+}),
+  ThrottlerModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: async (config: ConfigService) => ({
+      storage: new ThrottlerStorageRedisService({
+        host: config.get<string>('REDIS_HOST'),
+        port: config.get<number>('REDIS_PORT'),
+      }),
+      throttlers: [
+        {
+          name: 'short',
+          limit: 7,
+          ttl: seconds(5),
+          blockDuration: minutes(10),
+        },
+        {
+          name: 'medium',
+          limit: 25,
+          ttl: minutes(1),
+          blockDuration: minutes(30),
+        },
+        {
+          name: 'long',
+          limit: 100,
+          ttl: minutes(2),
+          blockDuration: minutes(60),
+        }
+      ],
+      errorMessage: 'Too many requests, please try again later.',
 
+      // getTracker: (req: Record<string, unknown>, context: ExecutionContext) => {
+      //   return req.headers['x-tenant-id'];
+      // }
+    })
+  }),
 ],
 
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,
+    {
+      provide: 'APP_GUARD',
+      useClass: ThrottlerGuard,
+    }
+  ],
 })
 
 export class AppModule implements NestModule {

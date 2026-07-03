@@ -17,6 +17,7 @@ import { Role } from './decorator/role.decorator';
 import { MaillerService } from '../mailler/mailler.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload } from './passport-strategy/access.token.strategy';
+import * as crypto from 'crypto';
 
 enum UserRole {
     CUSTOMER,
@@ -51,6 +52,7 @@ export class AuthService {
         if(password !== confirmPassword) throw new CustomBadRequestException("Password is wrong");
         const hashPassword = await this.hashPassword(password);
         
+        const token = crypto.randomBytes(32).toString("hex");
         await this.prisma.user.create({
             data: {
                 email: email,
@@ -61,6 +63,7 @@ export class AuthService {
                 profileImageUrl: register.profileImageUrl
             }
         });
+        await this.mailService.sendVerifyEmail(register.email!, token);
     }
     async login(loginDto: LoginDto) : Promise<JWTTokens>{
         const { email , password} = loginDto;

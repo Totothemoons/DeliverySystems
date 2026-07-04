@@ -21,6 +21,7 @@ import KeyvRedis from '@keyv/redis';
 import { ThrottlerModule, seconds, minutes, ThrottlerGuard } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { GatewayModule } from './gateway/gateway.module';
+import { ChatModule } from './chat/chat.module';
 
 @Global()
 @Module({
@@ -93,6 +94,7 @@ imports: [ConfigModule.forRoot({
     })
   }),
   GatewayModule,
+  ChatModule,
 ],
 
   controllers: [AppController],

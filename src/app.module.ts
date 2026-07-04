@@ -20,6 +20,7 @@ import Keyv from 'keyv';
 import KeyvRedis from '@keyv/redis';
 import { ThrottlerModule, seconds, minutes, ThrottlerGuard } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Global()
 @Module({
@@ -91,6 +92,7 @@ imports: [ConfigModule.forRoot({
       // }
     })
   }),
+  GatewayModule,
 ],
 
   controllers: [AppController],

@@ -86,7 +86,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() dto: SendMessageDto,
     ) {
-        // ดึง senderId จาก token ป้องกันปลอม
         const senderId = client.data.user.sub;
 
         const message = await this.chatService.saveMessage({
@@ -96,9 +95,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             message: dto.message,
         });
 
-        // ส่งให้ทุกคนใน room
         this.server.to(`chat:${dto.orderId}`).emit('new-message', message);
 
         return { success: true };
+    }
+
+    @UseGuards(AccessTokenGuard)
+    @SubscribeMessage('get-messages')
+    async handleGetMessages(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() dto: JoinRoomDto,
+    ) {
+        const userId = client.data.user.sub;
+        const messages = await this.chatService.getMessagesByOrder(
+            dto.orderId,
+            userId
+        );
+        client.emit('messages', messages);
     }
 }

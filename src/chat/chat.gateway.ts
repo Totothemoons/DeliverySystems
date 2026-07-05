@@ -14,8 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { ChatService } from './chat.service';
 import { JoinRoomDto } from './dto/join-room.dto';
 import { SendMessageDto } from './dto/send-message.dto';
-import { AccessTokenGuard } from '../auth/guard/access-token.guard';
-
+import { WsJwtGuard } from '../auth/guard/ws-jwt.guard';
 @WebSocketGateway({
     namespace: '/chat',
     cors: { origin: '*'},
@@ -57,7 +56,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.log(`Client disconnected: ${client.id}`);
     }
 
-    @UseGuards(AccessTokenGuard)
+    @UseGuards(WsJwtGuard)
     @SubscribeMessage('join-room')
     handleJoinRoom(
         @ConnectedSocket() client: Socket,
@@ -70,7 +69,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
     }
 
-    @UseGuards(AccessTokenGuard)
+    @UseGuards(WsJwtGuard)
     @SubscribeMessage('leave-room')
     handleLeaveRoom(
         @ConnectedSocket() client: Socket,
@@ -80,7 +79,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('left-room', { orderId: dto.orderId });
     }
 
-    @UseGuards(AccessTokenGuard)
+    @UseGuards(WsJwtGuard)
     @SubscribeMessage('send-message')
     async handleSendMessage(
         @ConnectedSocket() client: Socket,
@@ -100,7 +99,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { success: true };
     }
 
-    @UseGuards(AccessTokenGuard)
+    @UseGuards(WsJwtGuard)
     @SubscribeMessage('get-messages')
     async handleGetMessages(
         @ConnectedSocket() client: Socket,

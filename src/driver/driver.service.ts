@@ -1,152 +1,115 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CustomNotFoundException } from '../common/exception/not-found.exception';
-import { CustomForbiddenException } from '../common/exception/forbidden.exception';
-import { CreateDriverProfileDto } from './dto/create.dto';
-import { ConflictException } from '@nestjs/common';
-import { UpdateDriverProfileDto } from './dto/update.dto';
-import { CustomBadRequestException } from '../common/exception/bad-request.exception';
+import { UserRole } from '../auth/decorator/role.decorator';
+
 @Injectable()
 export class DriverService {
-    constructor(private readonly prisma : PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-    async getProfile(userId: string) {
-    const profile = await this.prisma.driverProfile.findUnique({
-      where: { userId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            fullname: true,
-            email: true,
-            phone: true,
-            profileImageUrl: true,
+  async createProfile(userId: string, data: { licenseNumber: string; vehicleType: string; vehiclePlate: string }) {
+    return this.prisma.driverProfile.upsert({ where: { userId }, create: { userId, ...data }, update: data });
+  }
+
+  async setAvailability(userId: string, value: boolean) {
+    return this.prisma.driverProfile.update({ where: { userId }, data: { isOnline: value } });
+  }
+
+  async setVerification(userId: string, isVerified: boolean) {
+    const driver = await this.prisma.driverProfile.findUnique({ where: { userId } });
+    if (!driver) throw new NotFoundException('Driver profile not found');
+    return this.prisma.driverProfile.update({ where: { userId }, data: { isVerified } });
+  }
+
+  async getAvailableDrivers() {
+    const freshAfter = new Date(Date.now() - 30_000);
+
+    return this.prisma.user.findMany({
+      where: {
+        role: UserRole.DRIVER,
+        isActive: true,
+
+        driverProfile: {
+          is: {
+            isVerified: true,
+            isOnline: true,
+            isBusy: false,
+          },
+        },
+
+        driverLocation: {
+          is: {
+            updatedAt: {
+              gte: freshAfter,
+            },
           },
         },
       },
-    });
- 
-    if (!profile) {
-      throw new CustomNotFoundException('Driver profile not found');
-    }
- 
-    return profile;
-  }
 
-  async createProfile(userId: string, dto: CreateDriverProfileDto) {
-
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new CustomNotFoundException('User not found');
-    if (user.role !== 'DRIVER') {
-      throw new CustomForbiddenException('Only users with DRIVER role can create a driver profile');
-    }
- 
-    const existing = await this.prisma.driverProfile.findUnique({
-      where: { userId },
-    });
-    if (existing) {
-      throw new ConflictException('Driver profile already exists');
-    }
- 
-    return this.prisma.driverProfile.create({
-      data: {
-        userId,
-        licenseNumber: dto.licenseNumber,
-        vehicleType: dto.vehicleType,
-        vehiclePlate: dto.vehiclePlate,
+      include: {
+        driverProfile: true,
+        driverLocation: true,
       },
     });
   }
 
-  async updateProfile(userId: string, dto: UpdateDriverProfileDto) {
-    const profile = await this.prisma.driverProfile.findUnique({
-      where: { userId },
+  async findNearestDrivers(
+    restaurantLatitude: number,
+    restaurantLongitude: number,
+  ) {
+    const drivers = await this.getAvailableDrivers();
+
+    const driversWithDistance = drivers.map((driver) => {
+      if (!driver.driverLocation) {
+        return null;
+      }
+
+      const distance = this.calculateDistance(
+        restaurantLatitude,
+        restaurantLongitude,
+        Number(driver.driverLocation.latitude),
+        Number(driver.driverLocation.longitude),
+      );
+
+      return {
+        driverId: driver.id,
+        fullname: driver.fullname,
+        distance,
+        location: {
+          latitude: driver.driverLocation.latitude,
+          longitude: driver.driverLocation.longitude,
+        },
+      };
     });
- 
-    if (!profile) throw new CustomNotFoundException('Driver profile not found');
- 
-    return this.prisma.driverProfile.update({
-      where: { userId },
-      data: {
-        ...(dto.licenseNumber && { licenseNumber: dto.licenseNumber }),
-        ...(dto.vehicleType && { vehicleType: dto.vehicleType }),
-        ...(dto.vehiclePlate && { vehiclePlate: dto.vehiclePlate }),
-      },
-    });
+
+    return driversWithDistance
+      .filter((driver) => driver !== null)
+      .sort((a, b) => a!.distance - b!.distance);
   }
 
-  async setOnline(userId: string) {
-    const profile = await this.prisma.driverProfile.findUnique({
-      where: { userId },
-    });
-  
-    if (!profile) throw new CustomNotFoundException('Driver profile not found');
-    if (!profile.isVerified) {
-      throw new CustomForbiddenException('Driver must be verified before going online');
-    }
- 
-    return this.prisma.driverProfile.update({
-      where: { userId },
-      data: {
-        isOnline: true,
-        lastActiveAt: new Date(),
-      },
-    });
-  }
- 
-  async setOffline(userId: string) {
-    const profile = await this.prisma.driverProfile.findUnique({
-      where: { userId },
-    });
- 
-    if (!profile) throw new CustomNotFoundException('Driver profile not found');
-    if (profile.isBusy) {
-      throw new CustomBadRequestException('Cannot go offline while delivering an order');
-    }
- 
-    return this.prisma.driverProfile.update({
-      where: { userId },
-      data: { isOnline: false },
-    });
-  }
-  
-  async setBusy(userId: string) {
-    const profile = await this.prisma.driverProfile.findUnique({
-      where: { userId },
-    });
- 
-    if (!profile) throw new CustomNotFoundException('Driver profile not found');
-    if (!profile.isOnline) {
-      throw new CustomBadRequestException('Driver must be online to set busy');
-    }
- 
-    return this.prisma.driverProfile.update({
-      where: { userId },
-      data: { isBusy: true },
-    });
-  }
- 
-  async setFree(userId: string) {
-    const profile = await this.prisma.driverProfile.findUnique({
-      where: { userId },
-    });
- 
-    if (!profile) throw new CustomNotFoundException('Driver profile not found');
- 
-    return this.prisma.driverProfile.update({
-      where: { userId },
-      data: { isBusy: false },
-    });
+  private calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const earthRadiusKm = 6371;
+
+    const dLat = this.toRadians(lat2 - lat1);
+    const dLon = this.toRadians(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(lat1)) *
+        Math.cos(this.toRadians(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return earthRadiusKm * c;
   }
 
-  async getRating(userId: string) {
-    const profile = await this.prisma.driverProfile.findUnique({
-      where: { userId },
-      select: { rating: true },
-    });
- 
-    if (!profile) throw new CustomNotFoundException('Driver profile not found');
- 
-    return { rating: profile.rating };
+  private toRadians(value: number): number {
+    return (value * Math.PI) / 180;
   }
 }

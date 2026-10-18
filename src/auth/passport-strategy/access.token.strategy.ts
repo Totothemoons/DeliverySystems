@@ -18,6 +18,6 @@ export class AccessStrategy extends PassportStrategy(Strategy, 'jwt'){
     }
 
     validate(payload: JwtPayload){
-        return payload;
+        return payload; 
     }
 }

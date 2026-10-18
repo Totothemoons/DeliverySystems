@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { MaillerService } from '../mailler/mailler.service';
 import { PassportModule } from '@nestjs/passport';
 import { AccessStrategy } from './passport-strategy/access.token.strategy';
+import { RoleGuard } from './guard/authorization.guard';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { AccessStrategy } from './passport-strategy/access.token.strategy';
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, MaillerService, AccessStrategy],
+  providers: [AuthService, MaillerService, AccessStrategy, RoleGuard],
   exports: [AuthService]
 })
 export class AuthModule {}

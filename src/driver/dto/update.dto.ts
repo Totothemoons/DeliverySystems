@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsLatitude, IsLongitude, } from 'class-validator';
 
 export class UpdateDriverProfileDto {
   @IsOptional()
@@ -15,4 +15,10 @@ export class UpdateDriverProfileDto {
   @IsString()
   @MaxLength(100)
   vehiclePlate?: string;
+
+  @IsLatitude()
+  latitude!: number;
+
+  @IsLongitude()
+  longitude!: number;
 }

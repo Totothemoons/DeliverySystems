@@ -22,6 +22,12 @@ import { ThrottlerModule, seconds, minutes, ThrottlerGuard } from '@nestjs/throt
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { GatewayModule } from './gateway/gateway.module';
 import { ChatModule } from './chat/chat.module';
+import { NotificationModule } from './notification/notification.module';
+import { DriverLocationModule } from './driver-location/driver-location.module';
+import { DeliveryModule } from './delivery/delivery.module';
+import { GoogleRoutesModule } from './google-routes/google-routes.module';
+import { WebsocketModule } from './websocket/websocket.module';
+import { RoleGuard } from './auth/guard/authorization.guard';
 
 @Global()
 @Module({
@@ -41,23 +47,24 @@ imports: [ConfigModule.forRoot({
   MenuItemsModule, 
   CloudinaryModule,
   OrderModule,
+
   CacheModule.registerAsync({
-  isGlobal: true,
-  inject: [ConfigService],
-  useFactory: async (config: ConfigService) => {
-    const host = config.get<string>('REDIS_HOST');
-    const port = config.get<number>('REDIS_PORT');
+    isGlobal: true,
+    inject: [ConfigService],
+    useFactory: async (config: ConfigService) => {
+      const host = config.get<string>('REDIS_HOST');
+      const port = config.get<number>('REDIS_PORT');
 
-    const keyv = new Keyv({
-      store: new KeyvRedis(`redis://${host}:${port}`),
-      namespace: undefined, 
-      useKeyPrefix: false,  
-    });
+      const keyv = new Keyv({
+        store: new KeyvRedis(`redis://${host}:${port}`),
+        namespace: undefined, 
+        useKeyPrefix: false,  
+      });
 
-    return {
-      stores: [keyv],
-    };
-  },
+      return {
+        stores: [keyv],
+      };
+    },
 }),
   ThrottlerModule.forRootAsync({
     inject: [ConfigService],
@@ -95,6 +102,11 @@ imports: [ConfigModule.forRoot({
   }),
   GatewayModule,
   ChatModule,
+  NotificationModule,
+  DriverLocationModule,
+  DeliveryModule,
+  GoogleRoutesModule,
+  WebsocketModule,
 ],
 
   controllers: [AppController],
@@ -102,7 +114,8 @@ imports: [ConfigModule.forRoot({
     {
       provide: 'APP_GUARD',
       useClass: ThrottlerGuard,
-    }
+    },
+    { provide: 'APP_GUARD', useClass: RoleGuard },
   ],
 })
 

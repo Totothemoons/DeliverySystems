@@ -1,7 +1,7 @@
   {
     "compilerOptions": {
-      "module": "nodenext", // should be CommonJS
-      "moduleResolution": "nodenext", // should be node
+      "module": "commonjs",
+      "moduleResolution": "node",
       "esModuleInterop": true,
       "ignoreDeprecations": "5.0",
       "isolatedModules": false,

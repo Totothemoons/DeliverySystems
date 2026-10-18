@@ -16,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 @WebSocketGateway({
     namespace: '/events',
     cors: { origin: '*' },
+    transports: ['websocket'],
 })
 
 export class EventsGateway implements OnGatewayConnection , OnGatewayDisconnect {
@@ -31,6 +32,7 @@ export class EventsGateway implements OnGatewayConnection , OnGatewayDisconnect 
         try{
             const token = 
                  client.handshake.auth.token ||
+                 client.handshake.query?.token as string ||
                  client.handshake.headers.authorization?.replace('Bearer ', '');
 
             if(!token) {
@@ -53,6 +55,7 @@ export class EventsGateway implements OnGatewayConnection , OnGatewayDisconnect 
 
     handleDisconnect(client: Socket){
         console.log(`[Events] Disconnected: ${client.data.user?.sub}`);
+        client.disconnect();
     }
 
     @SubscribeMessage('join-order')

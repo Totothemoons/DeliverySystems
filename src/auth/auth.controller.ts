@@ -7,6 +7,7 @@ import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { AccessTokenGuard } from './guard/access-token.guard.js';
 import { forgotPasswordDto } from './dto/forgot-password.js';
 import { ResetPasswordDto } from './dto/reset-password.dto.js';
+import { RegisterDriverDto } from './dto/register-driver.dto.js';
 
 export interface JWTTokens {
     token: string,
@@ -22,20 +23,30 @@ export class AuthController {
         return await this.authService.createUser(registerDto);
     }
 
+    @Post('register/driver')
+    async registerDriver(@Body() dto: RegisterDriverDto) {
+        return this.authService.createDriver(dto);
+    }
+
+    @Post('register/shop')
+    async registerShop(@Body() dto: RegisterDto) {
+        return this.authService.createShop(dto);
+    }
+
     @Post('login')
     async login(@Body() loginDto: LoginDto, @Res({passthrough : true}) res): Promise<{token : string}>{
         const {token , refreshToken} = await this.authService.login(loginDto);
 
-        res.cookie('refreshToken', refreshToken, {
+        res.cookie('refreshToken', refreshToken, { // refreshToken
             httpOnly: true,
             sameSite: 'lax',
             secure: false,
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000 
         });
 
         return {token};
     }
-    @Post('refresh-token')
+    @Post('refresh-token') // localhost:3000/refresh-token => AccessToken
     async refreshToken(@Req() req, @Res({passthrough:true}) res) : Promise<{token : string}>{
         const refreshToken = req.cookies['refreshToken'];
 

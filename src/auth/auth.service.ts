@@ -18,6 +18,7 @@ import { MaillerService } from '../mailler/mailler.service';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload } from './passport-strategy/access.token.strategy';
 import * as crypto from 'crypto';
+import { RegisterDriverDto } from './dto/register-driver.dto';
 
 enum UserRole {
     CUSTOMER,
@@ -53,7 +54,7 @@ export class AuthService {
         const hashPassword = await this.hashPassword(password);
         
         const token = crypto.randomBytes(32).toString("hex");
-        await this.prisma.user.create({
+        const user = await this.prisma.user.create({
             data: {
                 email: email,
                 password: hashPassword,
@@ -64,6 +65,41 @@ export class AuthService {
             }
         });
         await this.mailService.sendVerifyEmail(register.email!, token);
+        return { message: 'Registration successful', userId: user.id, role: user.role };
+    }
+
+    async createDriver(register: RegisterDriverDto) {
+        const user = await this.createRoleUser(register, 'DRIVER');
+        await this.prisma.driverProfile.create({
+            data: {
+                userId: user.id,
+                licenseNumber: register.licenseNumber,
+                vehicleType: register.vehicleType,
+                vehiclePlate: register.vehiclePlate,
+                isVerified: false,
+                isOnline: false,
+                isBusy: false,
+            },
+        });
+        return { message: 'Driver registration successful. Await verification.', userId: user.id, role: user.role };
+    }
+
+    async createShop(register: RegisterDto) {
+        const user = await this.createRoleUser(register, 'SHOP');
+        return { message: 'Shop registration successful.', userId: user.id, role: user.role };
+    }
+
+    private async createRoleUser(register: RegisterDto, role: 'SHOP' | 'DRIVER') {
+        const { email, password, confirmPassword, fullname } = register;
+        if (!email || !password || !fullname) throw new CustomBadRequestException('Email, fullname and password are required');
+        if (password !== confirmPassword) throw new CustomBadRequestException('Password is wrong');
+        const existingUser = await this.prisma.user.findUnique({ where: { email } });
+        if (existingUser) throw new CustomBadRequestException('Email is already in used');
+        const passwordHash = await this.hashPassword(password);
+        const user = await this.prisma.user.create({
+            data: { email, password: passwordHash, fullname, role, phone: register.phone, profileImageUrl: register.profileImageUrl },
+        });
+        return user;
     }
     async login(loginDto: LoginDto) : Promise<JWTTokens>{
         const { email , password} = loginDto;
@@ -83,7 +119,6 @@ export class AuthService {
         }
         const token = await this.getTokens(existingUser);
         const hashedRefreshToken = await this.hashPassword(token.refreshToken)
-
 
         await this.prisma.refreshToken.create({
             data: {
@@ -159,7 +194,7 @@ export class AuthService {
             if(!token) {
                 throw new CustomUnauthorizedException("RefreshToken required!");
             }
-            const payload = await this.jwtService.verifyAsync(token, {
+            const payload = await this.jwtService.verifyAsync(token, { // refreshToken Cookie === .env
                 secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET')
             });
             const findToken  = await this.prisma.refreshToken.findMany({
@@ -207,7 +242,6 @@ export class AuthService {
                     },
                 })
             ]);
-
             return tokens
 
         }catch(err){

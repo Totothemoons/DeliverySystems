@@ -29,6 +29,22 @@ import { GoogleRoutesModule } from './google-routes/google-routes.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { RoleGuard } from './auth/guard/authorization.guard';
 
+function getRedisUrl(config: ConfigService): string {
+  const redisUrl = config.get<string>('REDIS_URL');
+  if (redisUrl) {
+    return redisUrl;
+  }
+
+  const host = config.get<string>('REDIS_HOST');
+  const port = config.get<number>('REDIS_PORT');
+  if (!host || !port) {
+    throw new Error('Set REDIS_URL or both REDIS_HOST and REDIS_PORT');
+  }
+
+  // REDIS_HOST must be a hostname here; use REDIS_URL for a full URL.
+  return `redis://${host}:${port}`;
+}
+
 @Global()
 @Module({
 
@@ -52,11 +68,8 @@ imports: [ConfigModule.forRoot({
     isGlobal: true,
     inject: [ConfigService],
     useFactory: async (config: ConfigService) => {
-      const host = config.get<string>('REDIS_HOST');
-      const port = config.get<number>('REDIS_PORT');
-
       const keyv = new Keyv({
-        store: new KeyvRedis(`redis://${host}:${port}`),
+        store: new KeyvRedis(getRedisUrl(config)),
         namespace: undefined, 
         useKeyPrefix: false,  
       });
@@ -69,10 +82,7 @@ imports: [ConfigModule.forRoot({
   ThrottlerModule.forRootAsync({
     inject: [ConfigService],
     useFactory: async (config: ConfigService) => ({
-      storage: new ThrottlerStorageRedisService({
-        host: config.get<string>('REDIS_HOST'),
-        port: config.get<number>('REDIS_PORT'),
-      }),
+      storage: new ThrottlerStorageRedisService(getRedisUrl(config)),
       throttlers: [
         {
           name: 'short',

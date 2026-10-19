@@ -9,6 +9,5 @@ README.md
 .dockerignore
 docker-compose.yml
 Dockerfile
-prisma/migrations
 src/**/*.spec.ts
 nginx/
